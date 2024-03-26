@@ -91,7 +91,7 @@ end
 function (v2e::VertexToEdgeMean)(v_field::AbstractArray)
     is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
     s = construct_new_node_index(size(v_field)...,length(v2e.verticesOnEdge))
-    e_field = Arary{eltype(v_field)}(undef,s)
+    e_field = similar(v_field,s)
     return v2e(e_field,v_field)
 end
 
@@ -128,17 +128,17 @@ end
 function (c2e::CellToEdgeMean)(c_field::AbstractArray)
     is_proper_size(c_field,c2e.n) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
     s = construct_new_node_index(size(c_field)...,length(c2e.cellsOnEdge))
-    e_field = Arary{eltype(c_field)}(undef,s)
+    e_field = similar(c_field,s)
     return c2e(e_field,c_field)
 end
 
 function (c2e::CellToEdgeMean)(e_field::AbstractArray{T},op::F,c_field::AbstractArray{T}) where {T,F<:Function}
     is_proper_size(c_field,c2e.n) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
 
-    voe = c2e.cellsOnEdge
+    coe = c2e.cellsOnEdge
 
     @inbounds @inline for I in CartesianIndices(e_field)
-        e_field[I] = op(e_field[I],to_mean_transformation(c_field,Tuple(I),voe))
+        e_field[I] = op(e_field[I],to_mean_transformation(c_field,Tuple(I),coe))
     end
     
     return e_field

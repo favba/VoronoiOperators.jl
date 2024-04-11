@@ -29,14 +29,21 @@ end
     return to_mean_transformation(input_field,ind1,ind2)
 end
 
-function to_mean_transformation(output_field::AbstractVector{T},input_field::AbstractVector{T},indices::AbstractVector{NTuple{2,T2}}) where {T,T2<:Integer}
-    @inbounds for i in eachindex(e_field)
+function to_mean_transformation!(output_field::AbstractVector,input_field::AbstractVector,indices::AbstractVector{NTuple{2,T2}}) where {T2<:Integer}
+    @inbounds for i in eachindex(output_field)
         output_field[i] = to_mean_transformation(input_field,(i,),indices)
     end
     return output_field
 end
 
-function to_mean_transformation(output_field::AbstractMatrix{T},input_field::AbstractMatrix{T},indices::AbstractVector{NTuple{2,T2}}) where {T,T2<:Integer}
+function to_mean_transformation!(output_field::AbstractVector,op::F,input_field::AbstractVector,indices::AbstractVector{NTuple{2,T2}}) where {F<:Function,T2<:Integer}
+    @inbounds for i in eachindex(output_field)
+        output_field[i] = op(output_field[i], to_mean_transformation(input_field,(i,),indices))
+    end
+    return output_field
+end
+
+function to_mean_transformation!(output_field::AbstractMatrix,input_field::AbstractMatrix,indices::AbstractVector{NTuple{2,T2}}) where {T2<:Integer}
 
     @inbounds for i in axes(output_field,2)
         v1, v2 = map(Int,indices[i])
@@ -50,7 +57,21 @@ function to_mean_transformation(output_field::AbstractMatrix{T},input_field::Abs
     return output_field
 end
 
-function to_mean_transformation(output_field::AbstractArray{T,3},input_field::AbstractArray{T,3},indices::AbstractVector{NTuple{2,T2}}) where {T,T2<:Integer}
+function to_mean_transformation!(output_field::AbstractMatrix,op::F,input_field::AbstractMatrix,indices::AbstractVector{NTuple{2,T2}}) where {F<:Function,T2<:Integer}
+
+    @inbounds for i in axes(output_field,2)
+        v1, v2 = map(Int,indices[i])
+        for k in axes(output_field,1)
+            ind1 = (k,v1)
+            ind2 = (k,v2)
+            output_field[k,i] = op(output_field[k,i], to_mean_transformation(input_field,ind1,ind2))
+        end
+    end
+
+    return output_field
+end
+
+function to_mean_transformation!(output_field::AbstractArray{<:Any,3},input_field::AbstractArray{<:Any,3},indices::AbstractVector{NTuple{2,T2}}) where {T2<:Integer}
 
     @inbounds for t in axes(output_field,3)
         for i in axes(output_field,2)
@@ -66,11 +87,27 @@ function to_mean_transformation(output_field::AbstractArray{T,3},input_field::Ab
     return output_field
 end
 
+function to_mean_transformation!(output_field::AbstractArray{<:Any,3},op::F,input_field::AbstractArray{<:Any,3},indices::AbstractVector{NTuple{2,T2}}) where {F<:Function,T2<:Integer}
+
+    @inbounds for t in axes(output_field,3)
+        for i in axes(output_field,2)
+            v1, v2 = map(Int,indices[i])
+            for k in axes(output_field,1)
+                ind1 = (k,v1,t)
+                ind2 = (k,v2,t)
+                output_field[k,i,t] = op(output_field[k,i,t], to_mean_transformation(input_field,ind1,ind2))
+            end
+        end
+    end
+
+    return output_field
+end
+
 @inline is_proper_size(field::AbstractVector,n::Integer) = length(field) == n
 @inline is_proper_size(field::AbstractMatrix,n::Integer) = size(field,2) == n
 @inline is_proper_size(field::AbstractArray{<:Any,3},n::Integer) = size(field,2) == n
 
-struct VertexToEdgeMean{TI}
+struct VertexToEdgeMean{TI} <: VertexToEdgeTransformation
     n::Int
     verticesOnEdge::Vector{NTuple{2,TI}}
 end
@@ -82,8 +119,9 @@ VertexToEdgeMean(mesh::VoronoiMesh) = VertexToEdgeMean(mesh.vertices.base,mesh.e
 
 function (v2e::VertexToEdgeMean)(e_field::AbstractArray,v_field::AbstractArray)
     is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
+    is_proper_size(e_field,length(v2e.cellsOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
 
-    to_mean_transformation(e_field,v_field,v2e.verticesOnEdge)
+    to_mean_transformation!(e_field,v_field,v2e.verticesOnEdge)
     
     return e_field
 end
@@ -95,19 +133,16 @@ function (v2e::VertexToEdgeMean)(v_field::AbstractArray)
     return v2e(e_field,v_field)
 end
 
-function (v2e::VertexToEdgeMean)(e_field::AbstractArray{T},op::F,v_field::AbstractArray{T}) where {T,F<:Function}
+function (v2e::VertexToEdgeMean)(e_field::AbstractArray,op::F,v_field::AbstractArray) where {F<:Function}
     is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
+    is_proper_size(e_field,length(v2e.cellsOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
 
-    voe = v2e.verticesOnEdge
-
-    @inbounds @inline for I in CartesianIndices(e_field)
-        e_field[I] = op(e_field[I],to_mean_transformation(v_field,Tuple(I),voe))
-    end
-    
+    to_mean_transformation!(e_field,op,v_field,v2e.verticesOnEdge)
+   
     return e_field
 end
 
-struct CellToEdgeMean{TI}
+struct CellToEdgeMean{TI} <: CellToEdgeTransformation
     n::Int
     cellsOnEdge::Vector{NTuple{2,TI}}
 end
@@ -119,8 +154,9 @@ CellToEdgeMean(mesh::VoronoiMesh) = CellToEdgeMean(mesh.cells.base,mesh.edges.ba
 
 function (c2e::CellToEdgeMean)(e_field::AbstractArray,c_field::AbstractArray)
     is_proper_size(c_field,c2e.n) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
+    is_proper_size(e_field,length(c2e.cellsOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
 
-    to_mean_transformation(e_field,c_field,c2e.cellsOnEdge)
+    to_mean_transformation!(e_field,c_field,c2e.cellsOnEdge)
     
     return e_field
 end
@@ -132,14 +168,11 @@ function (c2e::CellToEdgeMean)(c_field::AbstractArray)
     return c2e(e_field,c_field)
 end
 
-function (c2e::CellToEdgeMean)(e_field::AbstractArray{T},op::F,c_field::AbstractArray{T}) where {T,F<:Function}
+function (c2e::CellToEdgeMean)(e_field::AbstractArray,op::F,c_field::AbstractArray) where {F<:Function}
     is_proper_size(c_field,c2e.n) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
+    is_proper_size(e_field,length(c2e.cellsOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
 
-    coe = c2e.cellsOnEdge
+    to_mean_transformation!(e_field,op,c_field,c2e.cellsOnEdge)
 
-    @inbounds @inline for I in CartesianIndices(e_field)
-        e_field[I] = op(e_field[I],to_mean_transformation(c_field,Tuple(I),coe))
-    end
-    
     return e_field
 end

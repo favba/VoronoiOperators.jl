@@ -98,7 +98,7 @@ end
 struct VecCellToEdgeMean{TI,TF,Tz} <: VecCellToEdgeTransformation
     n::Int
     cellsOnEdge::Vector{NTuple{2,TI}}
-    normalVectors::VecArray{Vec{Union{TF,Tz},1,TF,TF,Tz},1,Array{TF,1},Array{TF,1},Array{Tz,1}}
+    normalVectors::VecMaybe2DxyArray{TF,Tz,1}
 end
 
 VecCellToEdgeMean(cells::Union{<:CellBase,<:CellInfo},edges::EdgeInfo) = VecCellToEdgeMean(cells.n,edges.indices.cells,edges.normalVectors)
@@ -122,7 +122,6 @@ end
 function (vc2e::VecCellToEdgeMean)(c_field::AbstractArray{<:Vec})
     is_proper_size(c_field,vc2e.n) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
     s = construct_new_node_index(size(c_field)...,length(vc2e.cellsOnEdge))
-    e_field = similar(c_field,s)
     e_field = Array{nonzero_eltype(eltype(c_field))}(undef,s)
     return vc2e(e_field,c_field)
 end

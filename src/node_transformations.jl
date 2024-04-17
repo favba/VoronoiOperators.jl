@@ -107,7 +107,7 @@ VertexToEdgeMean(mesh::VoronoiMesh) = VertexToEdgeMean(mesh.vertices.base,mesh.e
 
 function (v2e::VertexToEdgeMean)(e_field::AbstractArray,v_field::AbstractArray)
     is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
-    is_proper_size(e_field,length(v2e.cellsOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
+    is_proper_size(e_field,length(v2e.verticesOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
 
     to_mean_transformation!(e_field,v_field,v2e.verticesOnEdge)
     
@@ -123,7 +123,7 @@ end
 
 function (v2e::VertexToEdgeMean)(e_field::AbstractArray,op::F,v_field::AbstractArray) where {F<:Function}
     is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
-    is_proper_size(e_field,length(v2e.cellsOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
+    is_proper_size(e_field,length(v2e.verticesOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
 
     to_mean_transformation!(e_field,op,v_field,v2e.verticesOnEdge)
    

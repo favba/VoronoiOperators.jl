@@ -89,10 +89,9 @@ function compute_baricentric_cell_to_edge_periodic!(w,inds,edge_pos,cell_pos,are
         c12_pos = closest(e_pos,cell_pos[c12],x_period,y_period)
         c13_pos = closest(e_pos,cell_pos[c13],x_period,y_period)
 
-        #at = areaTriangle[v1] # There is something wrong with areas in the distorted mesh
+        at = areaTriangle[v1]
 
-        #in_here, w1,w2,w3,_ = in_triangle(e_pos,at,c11_pos,c12_pos,c13_pos)
-        in_here, w1,w2,w3,at = in_triangle(e_pos,c11_pos,c12_pos,c13_pos)
+        in_here, w1,w2,w3,_ = in_triangle(e_pos,at,c11_pos,c12_pos,c13_pos)
         if in_here
             i1 = c11
             i2 = c12
@@ -103,9 +102,8 @@ function compute_baricentric_cell_to_edge_periodic!(w,inds,edge_pos,cell_pos,are
             c22_pos = closest(e_pos,cell_pos[c22],x_period,y_period)
             c23_pos = closest(e_pos,cell_pos[c23],x_period,y_period)
 
-            #at = areaTriangle[v2]
-            #in_here, w1,w2,w3,_ = in_triangle(e_pos,at,c21_pos,c22_pos,c23_pos)
-            in_here, w1,w2,w3,at = in_triangle(e_pos,c21_pos,c22_pos,c23_pos)
+            at = areaTriangle[v2]
+            in_here, w1,w2,w3,_ = in_triangle(e_pos,at,c21_pos,c22_pos,c23_pos)
             i1 = c21
             i2 = c22
             i3 = c23

@@ -46,16 +46,17 @@ end
     cell_const_vec_field3D = VecArray(x=ones(8,ncells,2),y=ones(8,ncells,2))
 
     for mesh in (mesh_iso,mesh_distorted)
-        c2emean = CellToEdgeMean(mesh)
-        for field in (cell_const_field1D,cell_const_field2D,cell_const_field3D)
-            @test all(isequal(1),c2emean(field))
-            e_field = c2emean(field)
-            @test all(isequal(2),c2emean(e_field,+,field))
-        end
-        for field in (cell_const_vec_field1D,cell_const_vec_field2D,cell_const_vec_field3D)
-            @test all(isequal(1.0𝐢+1.0𝐣),c2emean(field))
-            e_field = c2emean(field)
-            @test all(isequal(2.0𝐢+2.0𝐣),c2emean(e_field,+,field))
+        for c2e in (CellToEdgeMean(mesh), CellToEdgeBaricentric(mesh))
+            for field in (cell_const_field1D,cell_const_field2D,cell_const_field3D)
+                @test all(isapprox(1),c2e(field))
+                e_field = c2e(field)
+                @test all(isapprox(2),c2e(e_field,+,field))
+            end
+            for field in (cell_const_vec_field1D,cell_const_vec_field2D,cell_const_vec_field3D)
+                @test all(isapprox(1.0𝐢+1.0𝐣),c2e(field))
+                e_field = c2e(field)
+                @test all(isapprox(2.0𝐢+2.0𝐣),c2e(e_field,+,field))
+            end
         end
     end
 

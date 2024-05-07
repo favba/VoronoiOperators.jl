@@ -98,7 +98,7 @@ end
 struct VecCellToEdgeMean{TI,TF,Tz} <: VecCellToEdgeTransformation
     n::Int
     cellsOnEdge::Vector{NTuple{2,TI}}
-    normalVectors::VecMaybe2DxyArray{TF,Tz,1}
+    normalVectors::TensorsLite.VecMaybe2DxyArray{TF,Tz,1}
 end
 
 VecCellToEdgeMean(cells::Union{<:CellBase,<:CellInfo},edges::EdgeInfo) = VecCellToEdgeMean(cells.n,edges.indices.cells,edges.normalVectors)

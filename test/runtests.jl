@@ -21,16 +21,17 @@ const nedges = mesh_iso.edges.n
     vert_const_vec_field3D = VecArray(x=ones(8,nvertex,2),y=ones(8,nvertex,2))
 
     for mesh in (mesh_iso,mesh_distorted)
-        v2emean = VertexToEdgeMean(mesh)
-        for field in (vert_const_field1D,vert_const_field2D,vert_const_field3D)
-            @test all(isequal(1),v2emean(field))
-            e_field = v2emean(field)
-            @test all(isequal(2),v2emean(e_field,+,field))
-        end
-        for field in (vert_const_vec_field1D,vert_const_vec_field2D,vert_const_vec_field3D)
-            @test all(isequal(1.0𝐢+1.0𝐣),v2emean(field))
-            e_field = v2emean(field)
-            @test all(isequal(2.0𝐢+2.0𝐣),v2emean(e_field,+,field))
+        for v2e in (VertexToEdgeMean(mesh), VertexToEdgeInterpolation(mesh), VertexToEdgePiecewise(mesh), VertexToEdgeArea(mesh))
+            for field in (vert_const_field1D,vert_const_field2D,vert_const_field3D)
+                @test all(isequal(1),v2e(field))
+                e_field = v2e(field)
+                @test all(isequal(2),v2e(e_field,+,field))
+            end
+            for field in (vert_const_vec_field1D,vert_const_vec_field2D,vert_const_vec_field3D)
+                @test all(isequal(1.0𝐢+1.0𝐣),v2e(field))
+                e_field = v2e(field)
+                @test all(isequal(2.0𝐢+2.0𝐣),v2e(e_field,+,field))
+            end
         end
     end
 

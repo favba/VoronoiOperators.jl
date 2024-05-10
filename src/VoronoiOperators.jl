@@ -2,8 +2,8 @@ module VoronoiOperators
 
 using TensorsLite, TensorsLiteGeometry, VoronoiMeshDataStruct
 
-export VertexToEdgeTransformation, CellToEdgeTransformation
-export VertexToEdgeMean, CellToEdgeMean, CellToEdgeBaricentric
+export VertexToEdgeTransformation, VertexToEdgeMean, VertexToEdgeInterpolation, VertexToEdgePiecewise, VertexToEdgeArea
+export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric
 export VecCellToEdgeTransformation
 export VecCellToEdgeMean
 

@@ -132,9 +132,9 @@ function weighted_sum(input_field::AbstractArray,weights,indices)
     return r
 end
 
-@inline insert_index(inds_input::NTuple{0},inds_output::NTuple{N,Int}) where N = inds_output
-@inline insert_index(inds_input::NTuple{1},inds_output::NTuple{N,Int}) where N = ntuple(i->(inds_input[1],inds_output[i]),Val{N}())
-@inline insert_index(inds_input::NTuple{2},inds_output::NTuple{N,Int}) where N = ntuple(i->(inds_input[1],inds_output[i],inds_input[2]),Val{N}())
+@inline insert_index(inds_input::NTuple{0},inds_output::NTuple{N,T}) where {N,T<:Integer} = map(Int,inds_output)
+@inline insert_index(inds_input::NTuple{1},inds_output::NTuple{N,T}) where {N,T<:Integer} = ntuple(i->(Int(inds_input[1]),Int(inds_output[i])),Val{N}())
+@inline insert_index(inds_input::NTuple{2},inds_output::NTuple{N,T}) where {N,T<:Integer} = ntuple(i->(Int(inds_input[1]),Int(inds_output[i]),Int(inds_input[2])),Val{N}())
 
 function weighted_sum_transformation!(output_field::AbstractVector,input_field::AbstractVector,weights,indices::AbstractVector{NTuple{N,T2}}) where {N,T2<:Integer}
     @inbounds for i in eachindex(output_field)

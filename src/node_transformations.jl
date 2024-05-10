@@ -37,6 +37,119 @@ function (v2e::VertexToEdgeMean)(e_field::AbstractArray,op::F,v_field::AbstractA
     return e_field
 end
 
+struct VertexToEdgeWeighted{TI,TF} <: VertexToEdgeTransformation
+    n::Int
+    verticesOnEdge::Vector{NTuple{2,TI}}
+    weights::Vector{NTuple{2,TF}}
+end
+
+function (v2e::VertexToEdgeWeighted)(e_field::AbstractArray,v_field::AbstractArray)
+    is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
+    is_proper_size(e_field,length(v2e.verticesOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
+
+    weighted_sum_transformation!(e_field,v_field,v2e.weights, v2e.verticesOnEdge)
+    
+    return e_field
+end
+
+function (v2e::VertexToEdgeWeighted)(v_field::AbstractArray)
+    is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
+    s = construct_new_node_index(size(v_field)...,length(v2e.verticesOnEdge))
+    e_field = similar(v_field,s)
+    return v2e(e_field,v_field)
+end
+
+function (v2e::VertexToEdgeWeighted)(e_field::AbstractArray,op::F,v_field::AbstractArray) where {F<:Function}
+    is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
+    is_proper_size(e_field,length(v2e.verticesOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
+
+    weighted_sum_transformation!(e_field, op, v_field, v2e.weights, v2e.verticesOnEdge)
+
+    return e_field
+end
+
+struct VertexToEdgeInterpolation{TI,TF} <: VertexToEdgeTransformation
+    base::VertexToEdgeWeighted{TI,TF}
+    VertexToEdgeInterpolation(base::VertexToEdgeWeighted{TI,TF}) where {TI,TF} = new{TI,TF}(base)
+end
+
+function compute_interpolation_weights_vertex_to_edge_periodic(epos,vpos,voe,dvEdge,xp::Number,yp::Number)
+    weights = Vector{NTuple{2,eltype(dvEdge)}}(undef,length(epos))
+    @inbounds for e in eachindex(voe)
+        v1,v2 = voe[e]
+        dv = dvEdge[e]
+        ep = epos[e]
+        l_e_v1 = norm(closest(ep,vpos[v1],xp,yp)-ep)
+        #w1 = (dv - l_e_v1)/dv
+        w1 = 1 - l_e_v1/dv
+        w2 = 1 - w1
+        weights[e] = (w1,w2)
+    end
+    return weights
+end
+
+function compute_interpolation_weights_vertex_to_edge(vertices::Union{<:VertexBase{false},<:VertexInfo{false}},edges::EdgeInfo{false},xp::Number,yp::Number)
+    return compute_interpolation_weights_vertex_to_edge_periodic(edges.position,vertices.position,edges.indices.vertices,edges.dv,xp,yp)
+end
+
+function VertexToEdgeInterpolation(vertices::Union{<:VertexBase{false},<:VertexInfo{false}},edges::EdgeInfo{false},xp::Number,yp::Number)
+    weights = compute_interpolation_weights_vertex_to_edge(vertices,edges,xp,yp)
+    return VertexToEdgeInterpolation(VertexToEdgeWeighted(vertices.n,edges.indices.vertices,weights))
+end
+
+VertexToEdgeInterpolation(mesh::VoronoiMesh{false}) = VertexToEdgeInterpolation(mesh.vertices.base,mesh.edges,mesh.attributes[:x_period]::Float64,mesh.attributes[:y_period]::Float64)
+
+(v2e::VertexToEdgeInterpolation)(e_field::AbstractArray,v_field::AbstractArray) = v2e.base(e_field,v_field)
+(v2e::VertexToEdgeInterpolation)(v_field::AbstractArray) = v2e.base(v_field)
+(v2e::VertexToEdgeInterpolation)(e_field::AbstractArray,op::F,v_field::AbstractArray) where {F<:Function} = v2e.base(e_field,op,v_field)
+
+struct VertexToEdgePiecewise{TI,TF} <: VertexToEdgeTransformation
+    base::VertexToEdgeWeighted{TI,TF}
+    VertexToEdgePiecewise(base::VertexToEdgeWeighted{TI,TF}) where {TI,TF} = new{TI,TF}(base)
+end
+
+function VertexToEdgePiecewise(vertices::Union{<:VertexBase{false},<:VertexInfo{false}},edges::EdgeInfo{false},xp::Number,yp::Number)
+    weights = compute_interpolation_weights_vertex_to_edge(vertices,edges,xp,yp)
+    weights .= reverse.(weights)
+    return VertexToEdgePiecewise(VertexToEdgeWeighted(vertices.n,edges.indices.vertices,weights))
+end
+
+VertexToEdgePiecewise(mesh::VoronoiMesh{false}) = VertexToEdgePiecewise(mesh.vertices.base,mesh.edges,mesh.attributes[:x_period]::Float64,mesh.attributes[:y_period]::Float64)
+
+(v2e::VertexToEdgePiecewise)(e_field::AbstractArray,v_field::AbstractArray) = v2e.base(e_field,v_field)
+(v2e::VertexToEdgePiecewise)(v_field::AbstractArray) = v2e.base(v_field)
+(v2e::VertexToEdgePiecewise)(e_field::AbstractArray,op::F,v_field::AbstractArray) where {F<:Function} = v2e.base(e_field,op,v_field)
+
+struct VertexToEdgeArea{TI,TF} <: VertexToEdgeTransformation
+    base::VertexToEdgeWeighted{TI,TF}
+    VertexToEdgeArea(base::VertexToEdgeWeighted{TI,TF}) where {TI,TF} = new{TI,TF}(base)
+end
+
+function compute_area_weights_vertex_to_edge(voe,areaTriangles)
+    weights = Vector{NTuple{2,eltype(areaTriangles)}}(undef,length(voe))
+    @inbounds for e in eachindex(voe)
+        v1,v2 = voe[e]
+        a1 = areaTriangles[v1]
+        a2 = areaTriangles[v2]
+        at = a1+a2
+        w1 = a1/at
+        w2 = 1 - w1
+        weights[e] = (w1,w2)
+    end
+    return weights
+end
+
+function VertexToEdgeArea(vertices::VertexInfo,edges::Union{<:EdgeInfo,<:EdgeBase})
+    weights = compute_area_weights_vertex_to_edge(edges.indices.vertices,vertices.area)
+    return VertexToEdgeArea(VertexToEdgeWeighted(vertices.n,edges.indices.vertices,weights))
+end
+
+VertexToEdgeArea(mesh::VoronoiMesh) = VertexToEdgeArea(mesh.vertices,mesh.edges.base)
+
+(v2e::VertexToEdgeArea)(e_field::AbstractArray,v_field::AbstractArray) = v2e.base(e_field,v_field)
+(v2e::VertexToEdgeArea)(v_field::AbstractArray) = v2e.base(v_field)
+(v2e::VertexToEdgeArea)(e_field::AbstractArray,op::F,v_field::AbstractArray) where {F<:Function} = v2e.base(e_field,op,v_field)
+
 struct CellToEdgeMean{TI} <: CellToEdgeTransformation
     n::Int
     cellsOnEdge::Vector{NTuple{2,TI}}

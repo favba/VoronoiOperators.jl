@@ -191,11 +191,15 @@ struct CellToEdgeBaricentric{TI,TF} <: CellToEdgeTransformation
     weights::Vector{NTuple{3,TF}}
 end
 
-function compute_baricentric_cell_to_edge_periodic!(w,inds,edge_pos,cell_pos,areaTriangle,verticesOnEdge,cellsOnVertex,x_period::Number,y_period::Number)
+function compute_baricentric_cell_to_edge_periodic!(w,inds,edge_pos,cell_pos,v_pos,areaTriangle,verticesOnEdge,cellsOnVertex,x_period::Number,y_period::Number)
     
     @inbounds for e in eachindex(verticesOnEdge)
         e_pos = edge_pos[e]
         v1,v2 = verticesOnEdge[e]
+        v1_pos = closest(e_pos,v_pos[v1],x_period,y_period)
+        v2_pos = closest(e_pos,v_pos[v2],x_period,y_period)
+
+        e_mid = 0.5*(v1_pos + v2_pos)
 
         c11,c12,c13 = cellsOnVertex[v1]
         c11_pos = closest(e_pos,cell_pos[c11],x_period,y_period)
@@ -204,7 +208,7 @@ function compute_baricentric_cell_to_edge_periodic!(w,inds,edge_pos,cell_pos,are
 
         at = areaTriangle[v1]
 
-        in_here, w1,w2,w3,_ = in_triangle(e_pos,at,c11_pos,c12_pos,c13_pos)
+        in_here, w1,w2,w3,_ = in_triangle(e_mid,at,c11_pos,c12_pos,c13_pos)
         if in_here
             i1 = c11
             i2 = c12
@@ -216,14 +220,14 @@ function compute_baricentric_cell_to_edge_periodic!(w,inds,edge_pos,cell_pos,are
             c23_pos = closest(e_pos,cell_pos[c23],x_period,y_period)
 
             at = areaTriangle[v2]
-            in_here, w1,w2,w3,_ = in_triangle(e_pos,at,c21_pos,c22_pos,c23_pos)
+            in_here, w1,w2,w3,_ = in_triangle(e_mid,at,c21_pos,c22_pos,c23_pos)
             i1 = c21
             i2 = c22
             i3 = c23
         end
         inv_at = inv(at)
         w1 *= inv_at
-        w2 *= inv_at
+        #w2 *= inv_at
         w3 *= inv_at
 
         #make sure it most likely sums to one (might not due to float point precision)
@@ -236,15 +240,15 @@ function compute_baricentric_cell_to_edge_periodic!(w,inds,edge_pos,cell_pos,are
     return w,inds
 end
 
-function compute_baricentric_cell_to_edge_periodic(edge_pos,cell_pos,areaTriangle,verticesOnEdge,cellsOnVertex,x_period::Number,y_period::Number)
+function compute_baricentric_cell_to_edge_periodic(edge_pos,cell_pos,vertex_pos,areaTriangle,verticesOnEdge,cellsOnVertex,x_period::Number,y_period::Number)
     TF = eltype(cell_pos.x)
     w = Vector{NTuple{3,TF}}(undef,length(verticesOnEdge))
     inds = Vector{NTuple{3,Int}}(undef,length(verticesOnEdge))
-    return compute_baricentric_cell_to_edge_periodic!(w,inds,edge_pos,cell_pos,areaTriangle,verticesOnEdge,cellsOnVertex,x_period,y_period)
+    return compute_baricentric_cell_to_edge_periodic!(w,inds,edge_pos,cell_pos,vertex_pos,areaTriangle,verticesOnEdge,cellsOnVertex,x_period,y_period)
 end
 
 function compute_baricentric_cell_to_edge_periodic(m::VoronoiMesh)
-    compute_baricentric_cell_to_edge_periodic(m.edges.position, m.cells.position,m.vertices.area,
+    compute_baricentric_cell_to_edge_periodic(m.edges.position, m.cells.position, m.vertices.position, m.vertices.area,
                                               m.edges.indices.vertices, m.vertices.indices.cells,
                                               m.attributes[:x_period]::Float64, m.attributes[:y_period]::Float64)
 end

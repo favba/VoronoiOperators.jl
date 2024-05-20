@@ -37,7 +37,8 @@ function (kc::CellKineticEnergyRingler)(c_field::AbstractArray,e_field::Abstract
     is_proper_size(e_field,kc.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
     is_proper_size(c_field,length(kc.edgesOnCell)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
 
-    weighted_sum_transformation!(c_field,e_field,x->(x*x),kc.weights, kc.edgesOnCell)
+    square = @inline function (x); x*x;end
+    weighted_sum_transformation!(c_field,e_field,square,kc.weights, kc.edgesOnCell)
     
     return c_field
 end
@@ -53,7 +54,8 @@ function (kc::CellKineticEnergyRingler)(c_field::AbstractArray,op::F,e_field::Ab
     is_proper_size(e_field,kc.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
     is_proper_size(c_field,length(kc.edgesOnCell)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
 
-    weighted_sum_transformation!(c_field,op,e_field,x->(x*x),kc.weights, kc.edgesOnCell)
+    square = @inline function (x); x*x;end
+    weighted_sum_transformation!(c_field,op,e_field,square,kc.weights, kc.edgesOnCell)
  
     return c_field
 end
@@ -97,7 +99,8 @@ function (kv::VertexKineticEnergyGassmann)(v_field::AbstractArray,e_field::Abstr
     is_proper_size(e_field,kv.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
     is_proper_size(v_field,length(kv.edgesOnVertex)) || throw(DomainError(v_field,"Output array doesn't seem to be a vertex field"))
 
-    weighted_sum_transformation!(v_field,e_field,x->(x*x),kv.weights, kv.edgesOnVertex)
+    square = @inline function (x); x*x;end
+    weighted_sum_transformation!(v_field,e_field,square,kv.weights, kv.edgesOnVertex)
     
     return v_field
 end
@@ -113,7 +116,8 @@ function (kv::VertexKineticEnergyGassmann)(v_field::AbstractArray,op::F,e_field:
     is_proper_size(e_field,kv.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
     is_proper_size(v_field,length(kv.edgesOnVertex)) || throw(DomainError(v_field,"Output array doesn't seem to be a vertex field"))
 
-    weighted_sum_transformation!(v_field,op,e_field,x->(x*x),kv.weights, kv.edgesOnVertex)
+    square = @inline function (x); x*x;end
+    weighted_sum_transformation!(v_field,op,e_field,square,kv.weights, kv.edgesOnVertex)
  
     return v_field
 end
@@ -212,12 +216,20 @@ function (ckm::CellKineticEnergyMPAS)(c_field::AbstractArray,u::AbstractArray)
     ckm.vertexReconstruction(kv,u)
     ckm.RinglerReconstruction(c_field,u)
 
-    α = ckm.alpha
-    β = 1.0 - α
+    f = let α=ckm.alpha, β = 1.0 - α
+        @inline function (x,y); α*x + β*y;end
+    end
 
-    weighted_sum_transformation!(c_field,(x,y)->(α*x + β*y),kv,ckm.weightsVertexToCell,ckm.verticesOnCell)
+    weighted_sum_transformation!(c_field,f,kv,ckm.weightsVertexToCell,ckm.verticesOnCell)
 
     return c_field
+end
+
+function (kc::CellKineticEnergyMPAS)(e_field::AbstractArray)
+    is_proper_size(e_field,kc.RinglerReconstruction.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
+    s = construct_new_node_index(size(e_field)...,length(kc.RinglerReconstruction.edgesOnCell))
+    c_field = similar(e_field,Base.promote_op(*,eltype(eltype(kc.RinglerReconstruction.weights)),eltype(e_field)),s)
+    return kc(c_field,e_field)
 end
 
 function (ckm::CellKineticEnergyMPAS)(c_field::AbstractArray,op::F,u::AbstractArray) where F<:Union{typeof(Base.:+),typeof(Base.:-)}
@@ -226,11 +238,18 @@ function (ckm::CellKineticEnergyMPAS)(c_field::AbstractArray,op::F,u::AbstractAr
 
     kv = get_proper_kv(ckm,u)
     ckm.vertexReconstruction(kv,u)
-    α = ckm.alpha
-    ckm.RinglerReconstruction(c_field, (x,y)->op(x,α*y), u)
 
-    β = 1.0 - α
-    weighted_sum_transformation!(c_field,(x,y)->op(x,β*y),kv,ckm.weightsVertexToCell,ckm.verticesOnCell)
+    f1 = let op=op, α = ckm.alpha
+        @inline function (x,y); op(x,α*y);end
+    end
+
+    ckm.RinglerReconstruction(c_field, f1, u)
+
+    f2 = let op=op, β = 1.0 - ckm.alpha
+        @inline function (x,y);  op(x,β*y);end
+    end
+
+    weighted_sum_transformation!(c_field,f2,kv,ckm.weightsVertexToCell,ckm.verticesOnCell)
 
     return c_field
 end

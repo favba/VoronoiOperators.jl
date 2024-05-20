@@ -105,38 +105,98 @@ end
     return ntuple(i->t[i+1],Val{N-1}())
 end
 
-@inbounds @inline function weighted_sum(input_field::AbstractArray,weights::NTuple{2},indices::NTuple{2})
-   muladd(weights[1],input_field[indices[1]...],weights[2]*input_field[indices[2]...]) 
+@inbounds @inline function weighted_sum(input_field::AbstractVector,weights::NTuple{2},indices::NTuple{2})
+   muladd(weights[1],input_field[indices[1]],weights[2]*input_field[indices[2]]) 
 end
 
-@inbounds @inline function weighted_sum(op::F,input_field::AbstractArray,weights::NTuple{2},indices::NTuple{2}) where F<:Function
-   muladd(weights[1],op(input_field[indices[1]...]),weights[2]*op(input_field[indices[2]...]))
+@inbounds @inline function weighted_sum(input_field::AbstractMatrix,weights::NTuple{2},indices::NTuple{2},k::Int)
+   muladd(weights[1],input_field[k,indices[1]],weights[2]*input_field[k,indices[2]]) 
 end
 
-for N = 3:24
-    @eval function weighted_sum(input_field::AbstractArray,weights::NTuple{$N},indices::NTuple{$N})
-        $(Expr(:meta,:inline))
-        @inbounds muladd(weights[1], input_field[indices[1]...], weighted_sum(input_field, dropfirst(weights), dropfirst(indices)))
-    end
-
-    @eval function weighted_sum(op::F,input_field::AbstractArray,weights::NTuple{$N},indices::NTuple{$N}) where F<:Function
-        $(Expr(:meta,:inline))
-        @inbounds muladd(weights[1], op(input_field[indices[1]...]), weighted_sum(op,input_field, dropfirst(weights), dropfirst(indices)))
-    end
+@inbounds @inline function weighted_sum(input_field::AbstractArray{<:Any,3},weights::NTuple{2},indices::NTuple{2},k::Int,t::Int)
+   muladd(weights[1],input_field[k,indices[1],t],weights[2]*input_field[k,indices[2],t]) 
 end
 
-@inline function weighted_sum(input_field::AbstractArray,weights,indices)
+@inbounds @inline function weighted_sum(op::F,input_field::AbstractVector,weights::NTuple{2},indices::NTuple{2}) where F<:Function
+   muladd(weights[1],op(input_field[indices[1]]),weights[2]*op(input_field[indices[2]]))
+end
+
+@inbounds @inline function weighted_sum(op::F,input_field::AbstractMatrix,weights::NTuple{2},indices::NTuple{2},k::Int) where F<:Function
+   muladd(weights[1],op(input_field[k,indices[1]]),weights[2]*op(input_field[k,indices[2]]))
+end
+
+@inbounds @inline function weighted_sum(op::F,input_field::AbstractArray{<:Any,3},weights::NTuple{2},indices::NTuple{2},k::Int,t::Int) where F<:Function
+   muladd(weights[1],op(input_field[k,indices[1],t]),weights[2]*op(input_field[k,indices[2],t]))
+end
+
+@inbounds @inline function weighted_sum(input_field::AbstractVector,weights::NTuple{N},indices::NTuple{N}) where N
+    @inbounds muladd(weights[1], input_field[indices[1]], weighted_sum(input_field, dropfirst(weights), dropfirst(indices)))
+end
+
+@inbounds @inline function weighted_sum(input_field::AbstractMatrix,weights::NTuple{N},indices::NTuple{N},k::Int) where N
+    @inbounds muladd(weights[1], input_field[k,indices[1]], weighted_sum(input_field, dropfirst(weights), dropfirst(indices),k))
+end
+
+@inbounds @inline function weighted_sum(input_field::AbstractArray{<:Any,3},weights::NTuple{N},indices::NTuple{N},k::Int,t::Int) where N
+    @inbounds muladd(weights[1], input_field[k,indices[1],t], weighted_sum(input_field, dropfirst(weights), dropfirst(indices),k,t))
+end
+
+@inbounds @inline function weighted_sum(op::F,input_field::AbstractVector,weights::NTuple{N},indices::NTuple{N}) where {N,F<:Function}
+    @inbounds muladd(weights[1], op(input_field[indices[1]]), weighted_sum(op,input_field, dropfirst(weights), dropfirst(indices)))
+end
+
+@inbounds @inline function weighted_sum(op::F,input_field::AbstractMatrix,weights::NTuple{N},indices::NTuple{N},k::Int) where {N,F<:Function}
+    @inbounds muladd(weights[1], op(input_field[k,indices[1]]), weighted_sum(op,input_field, dropfirst(weights), dropfirst(indices),k))
+end
+
+@inbounds @inline function weighted_sum(op::F,input_field::AbstractArray{<:Any,3},weights::NTuple{N},indices::NTuple{N},k::Int,t::Int) where {N,F<:Function}
+    @inbounds muladd(weights[1], op(input_field[k,indices[1],t]), weighted_sum(op,input_field, dropfirst(weights), dropfirst(indices),k,t))
+end
+
+@inline function weighted_sum(input_field::AbstractVector,weights,indices)
     r = zero(Base.promote_op(*,eltype(weights),eltype(input_field)))
-    @inbounds for (i,inds) in enumerate(indices)
-        r = muladd(weights[i],input_field[inds...],r)
+    @inbounds for (i,ind) in enumerate(indices)
+        r = muladd(weights[i],input_field[ind],r)
     end
     return r
 end
 
-@inline function weighted_sum(op::F,input_field::AbstractArray,weights,indices) where F<:Function
+@inline function weighted_sum(input_field::AbstractMatrix,weights,indices,k::Int)
+    r = zero(Base.promote_op(*,eltype(weights),eltype(input_field)))
+    @inbounds for (i,ind) in enumerate(indices)
+        r = muladd(weights[i],input_field[k,ind],r)
+    end
+    return r
+end
+
+@inline function weighted_sum(input_field::AbstractArray{<:Any,3},weights,indices,k::Int,t::Int)
+    r = zero(Base.promote_op(*,eltype(weights),eltype(input_field)))
+    @inbounds for (i,ind) in enumerate(indices)
+        r = muladd(weights[i],input_field[k,ind,t],r)
+    end
+    return r
+end
+
+@inline function weighted_sum(op::F,input_field::AbstractVector,weights,indices) where F<:Function
     r = zero(Base.promote_op(*,eltype(weights),Base.promote_op(op,eltype(input_field))))
-    @inbounds for (i,inds) in enumerate(indices)
-        r = muladd(weights[i],op(input_field[inds...]),r)
+    @inbounds for (i,ind) in enumerate(indices)
+        r = muladd(weights[i],op(input_field[ind]),r)
+    end
+    return r
+end
+
+@inline function weighted_sum(op::F,input_field::AbstractMatrix,weights,indices,k::Int) where F<:Function
+    r = zero(Base.promote_op(*,eltype(weights),Base.promote_op(op,eltype(input_field))))
+    @inbounds for (i,ind) in enumerate(indices)
+        r = muladd(weights[i],op(input_field[k,ind]),r)
+    end
+    return r
+end
+
+@inline function weighted_sum(op::F,input_field::AbstractArray{<:Any,3},weights,indices,k::Int,t::Int) where F<:Function
+    r = zero(Base.promote_op(*,eltype(weights),Base.promote_op(op,eltype(input_field))))
+    @inbounds for (i,ind) in enumerate(indices)
+        r = muladd(weights[i],op(input_field[k,ind,t]),r)
     end
     return r
 end
@@ -179,8 +239,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix,input_field::
         inds = indices[i]
         w = weights[i]
         for k in axes(output_field,1)
-            inds_input = insert_index((k,),inds)
-            output_field[k,i] = weighted_sum(input_field,w,inds_input)
+            output_field[k,i] = weighted_sum(input_field,w,inds,k)
         end
     end
 
@@ -193,8 +252,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix,input_field::
         inds = indices[i]
         w = weights[i]
         for k in axes(output_field,1)
-            inds_input = insert_index((k,),inds)
-            output_field[k,i] = weighted_sum(op,input_field,w,inds_input)
+            output_field[k,i] = weighted_sum(op,input_field,w,inds,k)
         end
     end
 
@@ -207,8 +265,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix,op::F,input_f
         inds = indices[i]
         w = weights[i]
         for k in axes(output_field,1)
-            inds_input = insert_index((k,),inds)
-            output_field[k,i] = op(output_field[k,i],weighted_sum(input_field,w,inds_input))
+            output_field[k,i] = op(output_field[k,i],weighted_sum(input_field,w,inds,k))
         end
     end
 
@@ -221,8 +278,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix,op::F,input_f
         inds = indices[i]
         w = weights[i]
         for k in axes(output_field,1)
-            inds_input = insert_index((k,),inds)
-            output_field[k,i] = op(output_field[k,i],weighted_sum(op2,input_field,w,inds_input))
+            output_field[k,i] = op(output_field[k,i],weighted_sum(op2,input_field,w,inds,k))
         end
     end
 
@@ -236,8 +292,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},input
         w = weights[i]
         for t in axes(output_field,3)
             for k in axes(output_field,1)
-                inds_input = insert_index((k,t),inds)
-                output_field[k,i,t] = weighted_sum(input_field,w,inds_input)
+                output_field[k,i,t] = weighted_sum(input_field,w,inds,k,t)
             end
         end
     end
@@ -252,8 +307,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},input
         w = weights[i]
         for t in axes(output_field,3)
             for k in axes(output_field,1)
-                inds_input = insert_index((k,t),inds)
-                output_field[k,i,t] = weighted_sum(op,input_field,w,inds_input)
+                output_field[k,i,t] = weighted_sum(op,input_field,w,inds,k,t)
             end
         end
     end
@@ -268,8 +322,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},op::F
         w = weights[i]
         for t in axes(output_field,3)
             for k in axes(output_field,1)
-                inds_input = insert_index((k,t),inds)
-                output_field[k,i,t] = op(output_field[k,i,t],weighted_sum(input_field,w,inds_input))
+                output_field[k,i,t] = op(output_field[k,i,t],weighted_sum(input_field,w,inds,k,t))
             end
         end
     end
@@ -284,8 +337,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},op::F
         w = weights[i]
         for t in axes(output_field,3)
             for k in axes(output_field,1)
-                inds_input = insert_index((k,t),inds)
-                output_field[k,i,t] = op(output_field[k,i,t],weighted_sum(op2,input_field,w,inds_input))
+                output_field[k,i,t] = op(output_field[k,i,t],weighted_sum(op2,input_field,w,inds,k,t))
             end
         end
     end

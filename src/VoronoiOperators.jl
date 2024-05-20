@@ -6,12 +6,14 @@ export VertexToEdgeTransformation, VertexToEdgeMean, VertexToEdgeInterpolation, 
 export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric
 export VecCellToEdgeTransformation
 export VecCellToEdgeMean
+export CellVelocityReconstruction,CellVelocityReconstructionPerot
 export CellKineticEnergyMPAS, CellKineticEnergyRingler
 
 include("utils.jl")
 
 include("node_transformations.jl")
 include("cell_vector_to_edge_transformations.jl")
+include("cell_velocity_reconstruction.jl")
 include("kinetic_energy_reconstruction.jl")
 
 end

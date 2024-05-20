@@ -63,6 +63,29 @@ end
 
 end
 
+@testset "Cell Velocity Reconstruction" begin
+    v = 2.0𝐢 + 3.0𝐣
+    for mesh in (mesh_iso,mesh_distorted)
+        isdefined(mesh.edges,:normalVectors) || compute_edge_normals!(mesh)
+        ue1D = dot.(mesh.edges.normalVectors,(v,))
+        ue2D = similar(ue1D,(8,nedges))
+        ue3D = similar(ue1D,(8,nedges,2))
+        for k in 1:8
+            ue2D[k,:] .= ue1D
+        end
+        for t in 1:2
+            ue3D[:,:,t] .= ue2D
+        end
+        for uR in (CellVelocityReconstructionPerot(mesh),)
+            for ueND in (ue1D,ue2D,ue3D)
+                @test all(isapprox(2.0𝐢+3.0𝐣),uR(ueND))
+                field = uR(ueND)
+                @test all(isapprox(4.0𝐢+6.0𝐣),uR(field,+,ueND))
+            end
+        end
+    end
+end
+
 @testset "Kinetic Energy Reconstruction" begin
     edge_const_field1D = ones(nedges)
     edge_const_field2D = ones(8,nedges)

@@ -253,3 +253,36 @@ function (ckm::CellKineticEnergyMPAS)(c_field::AbstractArray,op::F,u::AbstractAr
 
     return c_field
 end
+
+struct CellKineticEnergyVelRecon{N_MAX,TI,TF,TR<:CellVelocityReconstruction{N_MAX,TI,TF}} <: CellKineticEnergyReconstruction{N_MAX,TI,TF}
+    uR::TR
+end
+
+CellKineticEnergyPerot(mesh::VoronoiMesh) = CellKineticEnergyVelRecon(CellVelocityReconstructionPerot(mesh))
+
+function (kc::CellKineticEnergyVelRecon)(c_field::AbstractArray,e_field::AbstractArray)
+    is_proper_size(e_field,kc.uR.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
+    is_proper_size(c_field,length(kc.uR.edgesOnCell)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
+
+    energy = @inline function (y,x); 0.5*(x⋅x);end
+    kc.uR(c_field,energy,e_field)
+    
+    return c_field
+end
+
+function (kc::CellKineticEnergyVelRecon)(e_field::AbstractArray)
+    is_proper_size(e_field,kc.uR.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
+    s = construct_new_node_index(size(e_field)...,length(kc.uR.edgesOnCell))
+    c_field = similar(e_field,Base.promote_op(dot,eltype(eltype(kc.uR.weights)),eltype(eltype(kc.uR.weights))),s)
+    return kc(c_field,e_field)
+end
+
+function (kc::CellKineticEnergyVelRecon)(c_field::AbstractArray,op::F,e_field::AbstractArray) where {F<:Function}
+    is_proper_size(e_field,kc.uR.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
+    is_proper_size(c_field,length(kc.uR.edgesOnCell)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
+
+    energy = @inline function (y,x); op(y,0.5*(x⋅x));end
+    kc.uR(c_field,energy,e_field)
+ 
+    return c_field
+end

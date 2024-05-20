@@ -64,7 +64,7 @@ end
 end
 
 @testset "Cell Velocity Reconstruction" begin
-    v = 2.0𝐢 + 3.0𝐣
+    v = 3.0𝐢 + 4.0𝐣
     for mesh in (mesh_iso,mesh_distorted)
         isdefined(mesh.edges,:normalVectors) || compute_edge_normals!(mesh)
         ue1D = dot.(mesh.edges.normalVectors,(v,))
@@ -78,9 +78,15 @@ end
         end
         for uR in (CellVelocityReconstructionPerot(mesh),)
             for ueND in (ue1D,ue2D,ue3D)
-                @test all(isapprox(2.0𝐢+3.0𝐣),uR(ueND))
+                @test all(isapprox(3.0𝐢+4.0𝐣),uR(ueND))
                 field = uR(ueND)
-                @test all(isapprox(4.0𝐢+6.0𝐣),uR(field,+,ueND))
+                @test all(isapprox(6.0𝐢+8.0𝐣),uR(field,+,ueND))
+
+                for kR in (CellKineticEnergyVelRecon(uR),)
+                    @test all(isapprox(12.5),kR(ueND))
+                    fieldk = kR(ueND)
+                    @test all(isapprox(25.0),kR(fieldk,+,ueND))
+                end
             end
         end
     end

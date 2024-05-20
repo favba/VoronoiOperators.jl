@@ -7,7 +7,7 @@ export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric
 export VecCellToEdgeTransformation
 export VecCellToEdgeMean
 export CellVelocityReconstruction,CellVelocityReconstructionPerot
-export CellKineticEnergyMPAS, CellKineticEnergyRingler
+export CellKineticEnergyMPAS, CellKineticEnergyRingler, CellKineticEnergyVelRecon, CellKineticEnergyPerot
 
 include("utils.jl")
 

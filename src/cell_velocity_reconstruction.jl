@@ -1,6 +1,6 @@
-abstract type CellVelocityReconstruction end
+abstract type CellVelocityReconstruction{N_MAX,TF,TI} end
 
-struct CellVelocityReconstructionPerot{N_MAX,TF,TI}
+struct CellVelocityReconstructionPerot{N_MAX,TF,TI} <: CellVelocityReconstruction{N_MAX,TF,TI}
     nEdges::Int
     edgesOnCell::Vector{VariableLengthIndices{N_MAX,TI}}
     weights::Vector{NTuple{N_MAX,Vec2Dxy{TF}}}

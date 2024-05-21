@@ -238,7 +238,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix,input_field::
     @inbounds for i in axes(output_field,2)
         inds = indices[i]
         w = weights[i]
-        for k in axes(output_field,1)
+        @simd for k in axes(output_field,1)
             output_field[k,i] = weighted_sum(input_field,w,inds,k)
         end
     end
@@ -251,7 +251,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix,input_field::
     @inbounds for i in axes(output_field,2)
         inds = indices[i]
         w = weights[i]
-        for k in axes(output_field,1)
+        @simd for k in axes(output_field,1)
             output_field[k,i] = weighted_sum(op,input_field,w,inds,k)
         end
     end
@@ -264,7 +264,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix,op::F,input_f
     @inbounds for i in axes(output_field,2)
         inds = indices[i]
         w = weights[i]
-        for k in axes(output_field,1)
+        @simd for k in axes(output_field,1)
             output_field[k,i] = op(output_field[k,i],weighted_sum(input_field,w,inds,k))
         end
     end
@@ -277,7 +277,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix,op::F,input_f
     @inbounds for i in axes(output_field,2)
         inds = indices[i]
         w = weights[i]
-        for k in axes(output_field,1)
+        @simd for k in axes(output_field,1)
             output_field[k,i] = op(output_field[k,i],weighted_sum(op2,input_field,w,inds,k))
         end
     end
@@ -291,7 +291,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},input
         inds = indices[i]
         w = weights[i]
         for t in axes(output_field,3)
-            for k in axes(output_field,1)
+            @simd for k in axes(output_field,1)
                 output_field[k,i,t] = weighted_sum(input_field,w,inds,k,t)
             end
         end
@@ -306,7 +306,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},input
         inds = indices[i]
         w = weights[i]
         for t in axes(output_field,3)
-            for k in axes(output_field,1)
+            @simd for k in axes(output_field,1)
                 output_field[k,i,t] = weighted_sum(op,input_field,w,inds,k,t)
             end
         end
@@ -321,7 +321,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},op::F
         inds = indices[i]
         w = weights[i]
         for t in axes(output_field,3)
-            for k in axes(output_field,1)
+            @simd for k in axes(output_field,1)
                 output_field[k,i,t] = op(output_field[k,i,t],weighted_sum(input_field,w,inds,k,t))
             end
         end
@@ -336,7 +336,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},op::F
         inds = indices[i]
         w = weights[i]
         for t in axes(output_field,3)
-            for k in axes(output_field,1)
+            @simd for k in axes(output_field,1)
                 output_field[k,i,t] = op(output_field[k,i,t],weighted_sum(op2,input_field,w,inds,k,t))
             end
         end

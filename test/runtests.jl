@@ -105,3 +105,19 @@ const v = 3.0𝐢 + 4.0𝐣
         end
     end
 end
+
+@testset "Gradient at Edge" begin
+    for mesh in (mesh_iso,mesh_distorted)
+        c_field = dot.((v,),mesh.cells.position)
+        grad_c_field = dot.((v,),mesh.edges.normalVectors)
+        mask = periodic_edges_mask(mesh)
+        grad_c_masked = grad_c_field[mask]
+
+        ∇e = GradientAtEdge(mesh)
+        @test all(x->isapprox(x[1],x[2]),zip(grad_c_masked,∇e(c_field)[mask]))
+        
+        e_field = ∇e(c_field)
+        @test all(x->isapprox(2*x[1],x[2]),zip(grad_c_masked,∇e(e_field,+,c_field)[mask]))
+        @test all(x->isapprox(x[1],x[2]),zip(grad_c_masked,∇e(e_field,-,c_field)[mask]))
+    end
+end

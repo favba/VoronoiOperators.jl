@@ -63,8 +63,9 @@ end
 
 end
 
-@testset "Cell Velocity Reconstruction" begin
-    v = 3.0𝐢 + 4.0𝐣
+const v = 3.0𝐢 + 4.0𝐣
+
+@testset "Cell Velocity / Kinetic Energy Reconstruction" begin
     for mesh in (mesh_iso,mesh_distorted)
         isdefined(mesh.edges,:normalVectors) || compute_edge_normals!(mesh)
         ue1D = dot.(mesh.edges.normalVectors,(v,))
@@ -89,20 +90,17 @@ end
                 end
             end
         end
-    end
-end
-
-@testset "Kinetic Energy Reconstruction" begin
-    edge_const_field1D = ones(nedges)
-    edge_const_field2D = ones(8,nedges)
-    edge_const_field3D = ones(8,nedges,2)
-    for mesh in (mesh_iso,mesh_distorted)
-        for kc in (CellKineticEnergyRingler(mesh), CellKineticEnergyMPAS(mesh))
-            for field in (edge_const_field1D,edge_const_field2D,edge_const_field3D)
-                @test all(>(0),kc(field))
-                s = ndims(field) == 1 ? (ncells,) : ndims(field) == 2 ? (8,ncells) : (8,ncells,2)
-                f = ones(s)
-                @test kc(f,+,field) ≈ (kc(field) .+ 1)
+        for kR in (CellKineticEnergyRingler(mesh),CellKineticEnergyMPAS(mesh))
+            for ueND in (ue1D,ue2D,ue3D)
+                if (mesh === mesh_iso)
+                    @test all(isapprox(12.5),kR(ueND))
+                    fieldk = kR(ueND)
+                    @test all(isapprox(25.0),kR(fieldk,+,ueND))
+                else
+                    @test all(x->isapprox(x,12.5;atol=3.0),kR(ueND))
+                    fieldk = kR(ueND)
+                    @test all(x->isapprox(x,25.0;atol=6.0),kR(fieldk,+,ueND))
+                end
             end
         end
     end

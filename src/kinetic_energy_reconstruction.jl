@@ -1,4 +1,4 @@
-abstract type CellKineticEnergyReconstruction{N_MAX,TI,TF} end
+abstract type CellKineticEnergyReconstruction{N_MAX,TI,TF} <: VoronoiOperator end
 
 struct CellKineticEnergyRingler{N_MAX,TI,TF} <: CellKineticEnergyReconstruction{N_MAX,TI,TF}
     nEdges::Int

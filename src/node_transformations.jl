@@ -1,6 +1,6 @@
-abstract type VertexToEdgeTransformation end
+abstract type VertexToEdgeTransformation <: VoronoiOperator end
 
-abstract type CellToEdgeTransformation end
+abstract type CellToEdgeTransformation <: VoronoiOperator end
 
 struct VertexToEdgeMean{TI} <: VertexToEdgeTransformation
     n::Int

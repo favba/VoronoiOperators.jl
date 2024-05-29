@@ -1,4 +1,6 @@
-struct GradientAtEdge{TI,TF}
+abstract type DifferentialOperator <: VoronoiOperator end
+
+struct GradientAtEdge{TI,TF} <: DifferentialOperator
     nCells::Int
     dc::Vector{TF}
     cellsOnEdge::Vector{NTuple{2,TI}}

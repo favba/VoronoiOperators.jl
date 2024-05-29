@@ -1,4 +1,4 @@
-abstract type VecCellToEdgeTransformation end
+abstract type VecCellToEdgeTransformation <: VoronoiOperator end
 
 @inbounds @inline function vec_to_edge_mean_transformation(n::Vec, input_field::AbstractArray{<:Any,N}, inds1::NTuple{N,T1}, inds2::NTuple{N,T2}) where {N,T1<:Integer,T2<:Integer}
     @inline begin

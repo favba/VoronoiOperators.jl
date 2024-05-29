@@ -12,6 +12,8 @@ export GradientAtEdge
 
 include("utils.jl")
 
+abstract type VoronoiOperator end
+
 include("node_transformations.jl")
 include("cell_vector_to_edge_transformations.jl")
 include("cell_velocity_reconstruction.jl")

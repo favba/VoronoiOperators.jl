@@ -1,4 +1,4 @@
-abstract type CellVelocityReconstruction{N_MAX,TF,TI} end
+abstract type CellVelocityReconstruction{N_MAX,TF,TI} <: VoronoiOperator end
 
 struct CellVelocityReconstructionPerot{N_MAX,TF,TI} <: CellVelocityReconstruction{N_MAX,TF,TI}
     nEdges::Int

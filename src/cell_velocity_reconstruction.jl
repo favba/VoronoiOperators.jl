@@ -2,11 +2,11 @@ abstract type CellVelocityReconstruction{N_MAX,TF,TI} <: VoronoiOperator end
 
 struct CellVelocityReconstructionPerot{N_MAX,TF,TI} <: CellVelocityReconstruction{N_MAX,TF,TI}
     nEdges::Int
-    edgesOnCell::Vector{VariableLengthIndices{N_MAX,TI}}
-    weights::Vector{NTuple{N_MAX,Vec2Dxy{TF}}}
+    edgesOnCell::Vector{VariableLengthStaticVector{N_MAX,TI}}
+    weights::Vector{VariableLengthStaticVector{N_MAX,Vec2Dxy{TF}}}
 end
 
-function compute_weights_perot_velocity_reconstruction_periodic!(w::Vector{NTuple{N_MAX,T}},c_pos,aC,Le,ne,edgesOnCell::Vector{<:VariableLengthIndices{N_MAX}},v_pos,verticesOnEdge,xp::Number,yp::Number) where {T,N_MAX}
+function compute_weights_perot_velocity_reconstruction_periodic!(w::Vector{VariableLengthStaticVector{N_MAX,T}},c_pos,aC,Le,ne,edgesOnCell::Vector{<:VariableLengthStaticVector{N_MAX}},v_pos,verticesOnEdge,xp::Number,yp::Number) where {T,N_MAX}
     aux = Vector{T}(undef,N_MAX)
 
     @inbounds for c in eachindex(edgesOnCell)
@@ -14,7 +14,10 @@ function compute_weights_perot_velocity_reconstruction_periodic!(w::Vector{NTupl
         inv_a = inv(aC[c])
         fill!(aux,zero(T))
 
-        for (i,e) in enumerate(edgesOnCell[c])
+        eoc = edgesOnCell[c]
+        l = length(eoc)
+        for i in Base.OneTo(l)
+            e = eoc[i]
             v1,v2 = verticesOnEdge[e]
             v1p = closest(cp,v_pos[v1],xp,yp)
             v2p = closest(cp,v_pos[v2],xp,yp)
@@ -23,14 +26,14 @@ function compute_weights_perot_velocity_reconstruction_periodic!(w::Vector{NTupl
             r_vec = copysign(1,(ne[e]⋅r_vec))*r_vec
             aux[i] = inv_a*r_vec*Le[e]
         end
-        w[c] = ntuple(j->getindex(aux,j),Val{N_MAX}())
+        w[c] = VariableLengthStaticVector{N_MAX}(ntuple(j->getindex(aux,j),Val{N_MAX}()),l)
     end
     return w
 end
 
 function CellVelocityReconstructionPerot(cells::CellInfo{false,N_MAX},edges::EdgeInfo,vertices::VertexInfo,x_period::Number,y_period::Number) where N_MAX
     edgesOnCell = cells.indices.edges
-    weights = Vector{NTuple{N_MAX,eltype(cells.position)}}(undef,cells.n)
+    weights = Vector{VariableLengthStaticVector{N_MAX,eltype(cells.position)}}(undef,cells.n)
     compute_weights_perot_velocity_reconstruction_periodic!(weights,cells.position,cells.area,edges.dv,edges.normalVectors,edgesOnCell,vertices.position,edges.indices.vertices,x_period,y_period)
     return CellVelocityReconstructionPerot(edges.n,edgesOnCell,weights)
 end

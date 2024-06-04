@@ -2,11 +2,11 @@ abstract type CellKineticEnergyReconstruction{N_MAX,TI,TF} <: VoronoiOperator en
 
 struct CellKineticEnergyRingler{N_MAX,TI,TF} <: CellKineticEnergyReconstruction{N_MAX,TI,TF}
     nEdges::Int
-    edgesOnCell::Vector{VariableLengthStaticVector{N_MAX,TI}}
-    weights::Vector{VariableLengthStaticVector{N_MAX,TF}}
+    edgesOnCell::Vector{ImmutableVector{N_MAX,TI}}
+    weights::Vector{ImmutableVector{N_MAX,TF}}
 end
 
-function compute_weights_ringler_kinetic_energy!(w::Vector{VariableLengthStaticVector{N_MAX,T}},aC,Le,dc,edgesOnCell::Vector{<:VariableLengthStaticVector{N_MAX}}) where {T,N_MAX}
+function compute_weights_ringler_kinetic_energy!(w::Vector{ImmutableVector{N_MAX,T}},aC,Le,dc,edgesOnCell::Vector{<:ImmutableVector{N_MAX}}) where {T,N_MAX}
     aux = Vector{T}(undef,N_MAX)
 
     @inbounds for c in eachindex(edgesOnCell)
@@ -19,13 +19,13 @@ function compute_weights_ringler_kinetic_energy!(w::Vector{VariableLengthStaticV
             e = eoc[i]
             aux[i] = term*Le[e]*dc[e]
         end
-        w[c] = VariableLengthStaticVector{N_MAX}(ntuple(j->getindex(aux,j),Val{N_MAX}()),l)
+        w[c] = ImmutableVector{N_MAX}(ntuple(j->getindex(aux,j),Val{N_MAX}()),l)
     end
     return w
 end
 
-function compute_weights_ringler_kinetic_energy(aC::Vector{T},Le,dc,edgesOnCell::Vector{<:VariableLengthStaticVector{N_MAX}}) where {T,N_MAX}
-    w = Vector{VariableLengthStaticVector{N_MAX,T}}(undef,length(edgesOnCell))
+function compute_weights_ringler_kinetic_energy(aC::Vector{T},Le,dc,edgesOnCell::Vector{<:ImmutableVector{N_MAX}}) where {T,N_MAX}
+    w = Vector{ImmutableVector{N_MAX,T}}(undef,length(edgesOnCell))
     return compute_weights_ringler_kinetic_energy!(w,aC,Le,dc,edgesOnCell)
 end
 
@@ -159,15 +159,15 @@ end
 struct CellKineticEnergyMPAS{N_MAX,TI,TF} <: CellKineticEnergyReconstruction{N_MAX,TI,TF}
     vertexReconstruction::VertexKineticEnergyGassmann{TI,TF}
     RinglerReconstruction::CellKineticEnergyRingler{N_MAX,TI,TF}
-    weightsVertexToCell::Vector{VariableLengthStaticVector{N_MAX,TF}}
-    verticesOnCell::Vector{VariableLengthStaticVector{N_MAX,TI}}
+    weightsVertexToCell::Vector{ImmutableVector{N_MAX,TF}}
+    verticesOnCell::Vector{ImmutableVector{N_MAX,TI}}
     alpha::TF
     kv1d::Base.RefValue{Vector{TF}}
     kv2d::Base.RefValue{Matrix{TF}}
     kv3d::Base.RefValue{Array{TF,3}}
 end
 
-function compute_vertex_to_cell_weight!(w::Vector{VariableLengthStaticVector{N_MAX,TF}},verticesOnCell,areaCell,kiteAreaOnVertex,cellsOnVertex) where {N_MAX,TF}
+function compute_vertex_to_cell_weight!(w::Vector{ImmutableVector{N_MAX,TF}},verticesOnCell,areaCell,kiteAreaOnVertex,cellsOnVertex) where {N_MAX,TF}
     aux = Vector{TF}(undef,N_MAX)
     @inbounds for c in eachindex(areaCell)
         Ac = areaCell[c]
@@ -178,13 +178,13 @@ function compute_vertex_to_cell_weight!(w::Vector{VariableLengthStaticVector{N_M
             v = voc[i]
             aux[i] = select_kite_area(kiteAreaOnVertex,cellsOnVertex,v,c)/Ac
         end
-        w[c] = VariableLengthStaticVector{N_MAX}(ntuple(j->getindex(aux,j),Val{N_MAX}()),l)
+        w[c] = ImmutableVector{N_MAX}(ntuple(j->getindex(aux,j),Val{N_MAX}()),l)
     end
     return w
 end
 
 function compute_vertex_to_cell_weight(mesh::VoronoiMesh)
-    w = Vector{VariableLengthStaticVector{max_n_edges(typeof(mesh.cells)),eltype(mesh.cells.area)}}(undef,mesh.cells.n)
+    w = Vector{ImmutableVector{max_n_edges(typeof(mesh.cells)),eltype(mesh.cells.area)}}(undef,mesh.cells.n)
     return compute_vertex_to_cell_weight!(w,mesh.verticesOnCell,mesh.areaCell,mesh.vertices.kiteAreas,mesh.cellsOnVertex)
 end
 

@@ -121,3 +121,29 @@ end
         @test all(x->isapprox(x[1],x[2]),zip(grad_c_masked,∇e(e_field,-,c_field)[mask]))
     end
 end
+
+@testset "Cell value Filtering" begin
+    cell_const_field1D = ones(ncells)
+    cell_const_field2D = ones(8,ncells)
+    cell_const_field3D = ones(8,ncells,2)
+
+    cell_const_vec_field1D = VecArray(x=ones(ncells),y=ones(ncells))
+    cell_const_vec_field2D = VecArray(x=ones(8,ncells),y=ones(8,ncells))
+    cell_const_vec_field3D = VecArray(x=ones(8,ncells,2),y=ones(8,ncells,2))
+
+    for mesh in (mesh_iso,mesh_distorted)
+        Filter = CellBoxFilter(mesh)
+
+        for field in (cell_const_field1D,cell_const_field2D,cell_const_field3D)
+            @test all(isapprox(1),Filter(field))
+            e_field = Filter(field)
+            @test all(isapprox(2),Filter(e_field,+,field))
+        end
+
+        for field in (cell_const_vec_field1D,cell_const_vec_field2D,cell_const_vec_field3D)
+            @test all(isapprox(1.0𝐢+1.0𝐣),Filter(field))
+            e_field = Filter(field)
+            @test all(isapprox(2.0𝐢+2.0𝐣),Filter(e_field,+,field))
+        end
+    end
+end

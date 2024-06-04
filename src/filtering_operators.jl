@@ -118,3 +118,32 @@ function CellBoxFilter(mesh::VoronoiMesh{false},Δ::Number)
     indices,w = compute_cell_box_filter_weights_and_indices_periodic(Δ,mesh.cells.position,mesh.cells.area,mesh.cellsOnCell,mesh.verticesOnCell,mesh.vertices.position,mesh.attributes[:x_period]::Float64,mesh.attributes[:y_period]::Float64)
     return CellBoxFilter(Δ,w,indices)
 end
+
+function CellBoxFilter(mesh::VoronoiMesh{false})
+    Δ = 2*mesh.attributes[:dc]::Float64
+    return CellBoxFilter(mesh,Δ)
+end
+
+function (cellFilter::CellBoxFilter)(c_field::AbstractArray,e_field::AbstractArray)
+    is_proper_size(e_field,length(cellFilter.weights)) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
+    is_proper_size(c_field,length(cellFilter.weights)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
+
+    weighted_sum_transformation!(c_field,e_field,cellFilter.weights, cellFilter.indices)
+    
+    return c_field
+end
+
+function (cellFilter::CellBoxFilter)(e_field::AbstractArray)
+    is_proper_size(e_field,length(cellFilter.weights)) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
+    c_field = similar(e_field,Base.promote_op(*,eltype(eltype(cellFilter.weights)),eltype(e_field)))
+    return cellFilter(c_field,e_field)
+end
+
+function (cellFilter::CellBoxFilter)(c_field::AbstractArray,op::F,e_field::AbstractArray) where {F<:Function}
+    is_proper_size(e_field,length(cellFilter.weights)) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
+    is_proper_size(c_field,length(cellFilter.weights)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
+
+    weighted_sum_transformation!(c_field, op, e_field, cellFilter.weights, cellFilter.indices)
+
+    return c_field
+end

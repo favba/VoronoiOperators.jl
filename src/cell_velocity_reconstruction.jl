@@ -44,8 +44,8 @@ function CellVelocityReconstructionPerot(mesh::VoronoiMesh)
 end
 
 function (uR::CellVelocityReconstructionPerot)(c_field::AbstractArray,e_field::AbstractArray)
-    is_proper_size(c_field,length(uR.weights)) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
-    is_proper_size(e_field,uR.nEdges) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
+    is_proper_size(c_field,length(uR.weights)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
+    is_proper_size(e_field,uR.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
 
     weighted_sum_transformation!(c_field,e_field,uR.weights, uR.edgesOnCell)
     
@@ -60,8 +60,8 @@ function (uR::CellVelocityReconstructionPerot)(e_field::AbstractArray)
 end
 
 function (uR::CellVelocityReconstructionPerot)(c_field::AbstractArray,op::F,e_field::AbstractArray) where {F<:Function}
-    is_proper_size(c_field,length(uR.edgesOnCell)) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
-    is_proper_size(e_field,uR.nEdges) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
+    is_proper_size(c_field,length(uR.edgesOnCell)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
+    is_proper_size(e_field,uR.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
 
     weighted_sum_transformation!(c_field, op, e_field, uR.weights, uR.edgesOnCell)
 

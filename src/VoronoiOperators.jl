@@ -9,6 +9,7 @@ export VecCellToEdgeMean
 export CellVelocityReconstruction,CellVelocityReconstructionPerot
 export CellKineticEnergyMPAS, CellKineticEnergyRingler, CellKineticEnergyVelRecon, CellKineticEnergyPerot
 export GradientAtEdge
+export CellBoxFilter
 
 include("utils.jl")
 
@@ -19,5 +20,6 @@ include("cell_vector_to_edge_transformations.jl")
 include("cell_velocity_reconstruction.jl")
 include("kinetic_energy_reconstruction.jl")
 include("differential_operators.jl")
+include("filtering_operators.jl")
 
 end

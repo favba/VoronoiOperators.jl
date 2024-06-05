@@ -108,7 +108,7 @@ function compute_cell_box_filter_weights_and_indices_periodic(Δ,c_position,area
     elseif n_max == (3*N_MAX+1)
         return weight_indices_matrix_to_immutable(Val{3*N_MAX+1}(),nElementsOnCell,inds,w)
     elseif n_max == (4*N_MAX+1)
-        return weight_indices_matrix_to_immutable(Val{3*N_MAX+1}(),nElementsOnCell,inds,w)
+        return weight_indices_matrix_to_immutable(Val{4*N_MAX+1}(),nElementsOnCell,inds,w)
     else
         return weight_indices_matrix_to_immutable(Val{n_max}(),nElementsOnCell,inds,w)
     end

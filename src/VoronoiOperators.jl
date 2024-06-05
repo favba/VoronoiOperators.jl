@@ -8,7 +8,7 @@ export VecCellToEdgeTransformation
 export VecCellToEdgeMean
 export CellVelocityReconstruction,CellVelocityReconstructionPerot
 export CellKineticEnergyMPAS, CellKineticEnergyRingler, CellKineticEnergyVelRecon, CellKineticEnergyPerot
-export GradientAtEdge
+export GradientAtEdge, DivAtCell
 export CellBoxFilter
 
 include("utils.jl")

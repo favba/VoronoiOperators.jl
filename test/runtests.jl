@@ -122,6 +122,29 @@ end
     end
 end
 
+@testset "Divergence at Cell" begin
+    for mesh in (mesh_iso,mesh_distorted)
+        isdefined(mesh.edges,:normalVectors) || compute_edge_normals!(mesh)
+        ue1D = dot.(mesh.edges.normalVectors,(v,))
+        ue2D = similar(ue1D,(8,nedges))
+        ue3D = similar(ue1D,(8,nedges,2))
+        for k in 1:8
+            ue2D[k,:] .= ue1D
+        end
+        for t in 1:2
+            ue3D[:,:,t] .= ue2D
+        end
+        Div = DivAtCell(mesh)
+        for ueND in (ue1D,ue2D,ue3D)
+            atol = 1e-8*norm(v) # isapprox(0.0) is tricky to evaluate
+            @test all(x->isapprox(x,0.0;atol=atol),Div(ueND))
+            field = Div(ueND)
+            field .= 1
+            @test all(x->isapprox(x,1.0),Div(field,+,ueND))
+        end
+    end
+end
+ 
 @testset "Cell value Filtering" begin
     cell_const_field1D = ones(ncells)
     cell_const_field2D = ones(8,ncells)

@@ -3,7 +3,7 @@ abstract type FilteringOperator <: VoronoiOperator end
 using OrderedCollections
 
 struct CellBoxFilter{N_MAX,TI,TF} <: FilteringOperator
-    length::TF
+    width::TF
     weights::Vector{ImmutableVector{N_MAX,TF}}
     indices::Vector{ImmutableVector{N_MAX,TI}}
 end

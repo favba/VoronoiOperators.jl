@@ -1,6 +1,7 @@
 module VoronoiOperators
 
 using TensorsLite, TensorsLiteGeometry, ImmutableVectors, VoronoiMeshDataStruct
+using TaskLocalValues
 
 export VertexToEdgeTransformation, VertexToEdgeMean, VertexToEdgeInterpolation, VertexToEdgePiecewise, VertexToEdgeArea
 export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric

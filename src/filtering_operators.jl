@@ -18,7 +18,7 @@ function weight_indices_matrix_to_immutable(::Val{N_MAX}, nElements::AbstractVec
     w = Vector{ImmutableVector{N_MAX,TF}}(undef, nCells)
     indices = Vector{ImmutableVector{N_MAX,TI}}(undef, nCells)
 
-    @inbounds for i in Base.OneTo(nCells)
+    @inbounds Threads.@threads for i in Base.OneTo(nCells)
         r = Base.OneTo(nElements[i])
         w[i] = ImmutableVector{N_MAX}(@view wm[r, i])
         indices[i] = ImmutableVector{N_MAX}(@view inds[r, i])
@@ -35,11 +35,15 @@ function compute_cell_box_filter_weights_and_indices_periodic(Δ::Number, c_posi
     r = Δ / 2
     r2 = r * r
 
-    checked_cells = OrderedSet{Int}() # To store cells that were already checked
-    cells_to_check = OrderedSet{Int}() # Set of cells we want to check
-    neighbour_cells = OrderedSet{Int}() # Set of cells surrounding a given cell
+    checked_cells_task = TaskLocalValue{OrderedSet{Int}}(()->OrderedSet{Int}()) # To store cells that were already checked
+    cells_to_check_task = TaskLocalValue{OrderedSet{Int}}(()->OrderedSet{Int}()) # Set of cells we want to check
+    neighbour_cells_task = TaskLocalValue{OrderedSet{Int}}(()->OrderedSet{Int}()) # Set of cells surrounding a given cell
 
-    for c in Base.OneTo(nCells)
+    Threads.@threads for c in Base.OneTo(nCells)
+        checked_cells = checked_cells_task[]
+        cells_to_check = cells_to_check_task[]
+        neighbour_cells = neighbour_cells_task[]
+
         empty!(checked_cells)
         center = c_position[c]
         current_vertices = verticesOnCell[c]

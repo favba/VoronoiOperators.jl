@@ -9,7 +9,7 @@ end
 GradientAtEdge(mesh::VoronoiMesh) = GradientAtEdge(mesh.cells.n,mesh.edges.dc,mesh.edges.cellsOnEdge)
 
 function gradient_at_edge!(out::AbstractVector,c_field,dc,cellsOnEdge)
-    @inbounds for e in eachindex(cellsOnEdge)
+    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
         c1,c2 = cellsOnEdge[e]
         out[e] = (c_field[c2] - c_field[c1])/dc[e]
     end
@@ -17,7 +17,7 @@ function gradient_at_edge!(out::AbstractVector,c_field,dc,cellsOnEdge)
 end
 
 function gradient_at_edge!(out::AbstractVector,op::F,c_field,dc,cellsOnEdge) where F<:Function
-    @inbounds for e in eachindex(cellsOnEdge)
+    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
         c1,c2 = cellsOnEdge[e]
         out[e] = op(out[e],(c_field[c2] - c_field[c1])/dc[e])
     end
@@ -25,7 +25,7 @@ function gradient_at_edge!(out::AbstractVector,op::F,c_field,dc,cellsOnEdge) whe
 end
 
 function gradient_at_edge!(out::AbstractMatrix,c_field,dc,cellsOnEdge)
-    @inbounds for e in eachindex(cellsOnEdge)
+    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         @simd for k in axes(out,1)
@@ -36,7 +36,7 @@ function gradient_at_edge!(out::AbstractMatrix,c_field,dc,cellsOnEdge)
 end
 
 function gradient_at_edge!(out::AbstractMatrix,op::F,c_field,dc,cellsOnEdge) where F<:Function
-    @inbounds for e in eachindex(cellsOnEdge)
+    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         @simd for k in axes(out,1)
@@ -47,7 +47,7 @@ function gradient_at_edge!(out::AbstractMatrix,op::F,c_field,dc,cellsOnEdge) whe
 end
 
 function gradient_at_edge!(out::AbstractMatrix,op::typeof(+),c_field,dc,cellsOnEdge)
-    @inbounds for e in eachindex(cellsOnEdge)
+    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         @simd for k in axes(out,1)
@@ -58,7 +58,7 @@ function gradient_at_edge!(out::AbstractMatrix,op::typeof(+),c_field,dc,cellsOnE
 end
 
 function gradient_at_edge!(out::AbstractArray{<:Any,3},c_field,dc,cellsOnEdge)
-    @inbounds for e in eachindex(cellsOnEdge)
+    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         for t in axes(out,3)
@@ -71,7 +71,7 @@ function gradient_at_edge!(out::AbstractArray{<:Any,3},c_field,dc,cellsOnEdge)
 end
 
 function gradient_at_edge!(out::AbstractArray{<:Any,3},op::F,c_field,dc,cellsOnEdge) where F<:Function
-    @inbounds for e in eachindex(cellsOnEdge)
+    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         for t in axes(out,3)
@@ -84,7 +84,7 @@ function gradient_at_edge!(out::AbstractArray{<:Any,3},op::F,c_field,dc,cellsOnE
 end
 
 function gradient_at_edge!(out::AbstractArray{<:Any,3},op::typeof(+),c_field,dc,cellsOnEdge)
-    @inbounds for e in eachindex(cellsOnEdge)
+    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         for t in axes(out,3)

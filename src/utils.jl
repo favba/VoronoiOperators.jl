@@ -28,27 +28,29 @@ end
 end
 
 function to_mean_transformation!(output_field::AbstractVector,input_field::AbstractVector,indices::AbstractVector{NTuple{2,T2}}) where {T2<:Integer}
-    @inbounds Threads.@threads for i in eachindex(output_field)
-        output_field[i] = to_mean_transformation(input_field,(i,),indices)
+    @parallel for i in eachindex(output_field)
+        @inbounds output_field[i] = to_mean_transformation(input_field,(i,),indices)
     end
     return output_field
 end
 
 function to_mean_transformation!(output_field::AbstractVector,op::F,input_field::AbstractVector,indices::AbstractVector{NTuple{2,T2}}) where {F<:Function,T2<:Integer}
-    @inbounds Threads.@threads for i in eachindex(output_field)
-        output_field[i] = op(output_field[i], to_mean_transformation(input_field,(i,),indices))
+    @parallel for i in eachindex(output_field)
+        @inbounds output_field[i] = op(output_field[i], to_mean_transformation(input_field,(i,),indices))
     end
     return output_field
 end
 
 function to_mean_transformation!(output_field::AbstractMatrix,input_field::AbstractMatrix,indices::AbstractVector{NTuple{2,T2}}) where {T2<:Integer}
 
-    @inbounds Threads.@threads for i in axes(output_field,2)
+    @parallel for i in axes(output_field,2)
+        @inbounds begin
         v1, v2 = map(Int,indices[i])
         for k in axes(output_field,1)
             ind1 = (k,v1)
             ind2 = (k,v2)
             output_field[k,i] = to_mean_transformation(input_field,ind1,ind2)
+        end
         end
     end
 
@@ -57,12 +59,14 @@ end
 
 function to_mean_transformation!(output_field::AbstractMatrix,op::F,input_field::AbstractMatrix,indices::AbstractVector{NTuple{2,T2}}) where {F<:Function,T2<:Integer}
 
-    @inbounds Threads.@threads for i in axes(output_field,2)
+    @parallel for i in axes(output_field,2)
+        @inbounds begin
         v1, v2 = map(Int,indices[i])
         for k in axes(output_field,1)
             ind1 = (k,v1)
             ind2 = (k,v2)
             output_field[k,i] = op(output_field[k,i], to_mean_transformation(input_field,ind1,ind2))
+        end
         end
     end
 
@@ -71,8 +75,8 @@ end
 
 function to_mean_transformation!(output_field::AbstractArray{<:Any,3},input_field::AbstractArray{<:Any,3},indices::AbstractVector{NTuple{2,T2}}) where {T2<:Integer}
 
-    @inbounds Threads.@threads for t in axes(output_field,3)
-        for i in axes(output_field,2)
+    @parallel for t in axes(output_field,3)
+        @inbounds for i in axes(output_field,2)
             v1, v2 = map(Int,indices[i])
             for k in axes(output_field,1)
                 ind1 = (k,v1,t)
@@ -87,8 +91,8 @@ end
 
 function to_mean_transformation!(output_field::AbstractArray{<:Any,3},op::F,input_field::AbstractArray{<:Any,3},indices::AbstractVector{NTuple{2,T2}}) where {F<:Function,T2<:Integer}
 
-    @inbounds Threads.@threads for t in axes(output_field,3)
-        for i in axes(output_field,2)
+    @parallel for t in axes(output_field,3)
+        @inbounds for i in axes(output_field,2)
             v1, v2 = map(Int,indices[i])
             for k in axes(output_field,1)
                 ind1 = (k,v1,t)
@@ -206,41 +210,43 @@ end
 @inline insert_index(inds_input::NTuple{2},inds_output::NTuple{N,T}) where {N,T<:Integer} = ntuple(i->(Int(inds_input[1]),Int(inds_output[i]),Int(inds_input[2])),Val{N}())
 
 function weighted_sum_transformation!(output_field::AbstractVector,input_field::AbstractVector,weights,indices)
-    @inbounds Threads.@threads for i in eachindex(output_field)
-        output_field[i] = weighted_sum(input_field,weights[i],indices[i])
+    @parallel for i in eachindex(output_field)
+        @inbounds output_field[i] = weighted_sum(input_field,weights[i],indices[i])
     end
     return output_field
 end
 
 function weighted_sum_transformation!(output_field::AbstractVector,input_field::AbstractVector,op::F,weights,indices) where F<:Function
-    @inbounds Threads.@threads for i in eachindex(output_field)
-        output_field[i] = weighted_sum(op,input_field,weights[i],indices[i])
+    @parallel for i in eachindex(output_field)
+        @inbounds output_field[i] = weighted_sum(op,input_field,weights[i],indices[i])
     end
     return output_field
 end
 
 function weighted_sum_transformation!(output_field::AbstractVector,op::F,input_field::AbstractVector,weights,indices) where F<:Function
-    @inbounds Threads.@threads for i in eachindex(output_field)
-        output_field[i] = op(output_field[i], weighted_sum(input_field,weights[i],indices[i]))
+    @parallel for i in eachindex(output_field)
+        @inbounds output_field[i] = op(output_field[i], weighted_sum(input_field,weights[i],indices[i]))
     end
     return output_field
 end
 
 function weighted_sum_transformation!(output_field::AbstractVector,op::F,input_field::AbstractVector,op2::F2,weights,indices) where {F<:Function,F2<:Function}
-    @inbounds Threads.@threads for i in eachindex(output_field)
-        output_field[i] = op(output_field[i], weighted_sum(op2,input_field,weights[i],indices[i]))
+    @parallel for i in eachindex(output_field)
+        @inbounds output_field[i] = op(output_field[i], weighted_sum(op2,input_field,weights[i],indices[i]))
     end
     return output_field
 end
 
 function weighted_sum_transformation!(output_field::AbstractMatrix,input_field::AbstractMatrix,weights,indices)
 
-    @inbounds Threads.@threads for i in axes(output_field,2)
+    @parallel for i in axes(output_field,2)
+        @inbounds begin
         inds = indices[i]
         w = weights[i]
         @simd for k in axes(output_field,1)
             output_field[k,i] = weighted_sum(input_field,w,inds,k)
         end
+        end #inbounds
     end
 
     return output_field
@@ -248,12 +254,14 @@ end
 
 function weighted_sum_transformation!(output_field::AbstractMatrix,input_field::AbstractMatrix,op::F,weights,indices) where F<:Function
 
-    @inbounds Threads.@threads for i in axes(output_field,2)
+    @parallel for i in axes(output_field,2)
+        @inbounds begin
         inds = indices[i]
         w = weights[i]
         @simd for k in axes(output_field,1)
             output_field[k,i] = weighted_sum(op,input_field,w,inds,k)
         end
+        end #inbounds
     end
 
     return output_field
@@ -261,12 +269,14 @@ end
 
 function weighted_sum_transformation!(output_field::AbstractMatrix,op::F,input_field::AbstractMatrix,weights,indices) where F<:Function
 
-    @inbounds Threads.@threads for i in axes(output_field,2)
+    @parallel for i in axes(output_field,2)
+        @inbounds begin
         inds = indices[i]
         w = weights[i]
         @simd for k in axes(output_field,1)
             output_field[k,i] = op(output_field[k,i],weighted_sum(input_field,w,inds,k))
         end
+        end #inbounds
     end
 
     return output_field
@@ -274,12 +284,14 @@ end
 
 function weighted_sum_transformation!(output_field::AbstractMatrix,op::F,input_field::AbstractMatrix,op2::F2,weights,indices) where {F<:Function,F2<:Function}
 
-    @inbounds Threads.@threads for i in axes(output_field,2)
+    @parallel for i in axes(output_field,2)
+        @inbounds begin
         inds = indices[i]
         w = weights[i]
         @simd for k in axes(output_field,1)
             output_field[k,i] = op(output_field[k,i],weighted_sum(op2,input_field,w,inds,k))
         end
+        end #inbounds 
     end
 
     return output_field
@@ -287,7 +299,8 @@ end
 
 function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},input_field::AbstractArray{<:Any,3},weights,indices)
 
-    @inbounds Threads.@threads for i in axes(output_field,2)
+    @parallel for i in axes(output_field,2)
+        @inbounds begin
         inds = indices[i]
         w = weights[i]
         for t in axes(output_field,3)
@@ -295,6 +308,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},input
                 output_field[k,i,t] = weighted_sum(input_field,w,inds,k,t)
             end
         end
+        end #inbounds
     end
 
     return output_field
@@ -302,7 +316,8 @@ end
 
 function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},input_field::AbstractArray{<:Any,3},op::F,weights,indices) where {F<:Function}
 
-    @inbounds Threads.@threads for i in axes(output_field,2)
+    @parallel for i in axes(output_field,2)
+        @inbounds begin
         inds = indices[i]
         w = weights[i]
         for t in axes(output_field,3)
@@ -310,6 +325,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},input
                 output_field[k,i,t] = weighted_sum(op,input_field,w,inds,k,t)
             end
         end
+        end #inbounds
     end
 
     return output_field
@@ -317,7 +333,8 @@ end
 
 function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},op::F,input_field::AbstractArray{<:Any,3},weights,indices) where {F<:Function}
 
-    @inbounds Threads.@threads for i in axes(output_field,2)
+    @parallel for i in axes(output_field,2)
+        @inbounds begin
         inds = indices[i]
         w = weights[i]
         for t in axes(output_field,3)
@@ -325,6 +342,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},op::F
                 output_field[k,i,t] = op(output_field[k,i,t],weighted_sum(input_field,w,inds,k,t))
             end
         end
+        end #inbounds 
     end
 
     return output_field
@@ -332,7 +350,8 @@ end
 
 function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},op::F,input_field::AbstractArray{<:Any,3},op2::F2,weights,indices) where {F<:Function,F2<:Function}
 
-    @inbounds Threads.@threads for i in axes(output_field,2)
+    @parallel for i in axes(output_field,2)
+        @inbounds begin
         inds = indices[i]
         w = weights[i]
         for t in axes(output_field,3)
@@ -340,6 +359,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{<:Any,3},op::F
                 output_field[k,i,t] = op(output_field[k,i,t],weighted_sum(op2,input_field,w,inds,k,t))
             end
         end
+        end #inbounds
     end
 
     return output_field

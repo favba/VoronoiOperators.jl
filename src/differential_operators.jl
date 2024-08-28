@@ -9,56 +9,67 @@ end
 GradientAtEdge(mesh::VoronoiMesh) = GradientAtEdge(mesh.cells.n,mesh.edges.dc,mesh.edges.cellsOnEdge)
 
 function gradient_at_edge!(out::AbstractVector,c_field,dc,cellsOnEdge)
-    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
+    @parallel for e in eachindex(cellsOnEdge)
+        @inbounds begin
         c1,c2 = cellsOnEdge[e]
         out[e] = (c_field[c2] - c_field[c1])/dc[e]
+        end
     end
     return out
 end
 
 function gradient_at_edge!(out::AbstractVector,op::F,c_field,dc,cellsOnEdge) where F<:Function
-    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
+    @parallel for e in eachindex(cellsOnEdge)
+        @inbounds begin
         c1,c2 = cellsOnEdge[e]
         out[e] = op(out[e],(c_field[c2] - c_field[c1])/dc[e])
+        end
     end
     return out
 end
 
 function gradient_at_edge!(out::AbstractMatrix,c_field,dc,cellsOnEdge)
-    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
+    @parallel for e in eachindex(cellsOnEdge)
+        @inbounds begin
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         @simd for k in axes(out,1)
             out[k,e] = inv_dc*(c_field[k,c2] - c_field[k,c1])
         end
+        end #inbounds
     end
     return out
 end
 
 function gradient_at_edge!(out::AbstractMatrix,op::F,c_field,dc,cellsOnEdge) where F<:Function
-    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
+    @parallel for e in eachindex(cellsOnEdge)
+        @inbounds begin
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         @simd for k in axes(out,1)
             out[k,e] = op(out[k,e],inv_dc*(c_field[k,c2] - c_field[k,c1]))
         end
+        end #inbounds
     end
     return out
 end
 
 function gradient_at_edge!(out::AbstractMatrix,op::typeof(+),c_field,dc,cellsOnEdge)
-    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
+    @parallel for e in eachindex(cellsOnEdge)
+        @inbounds begin
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         @simd for k in axes(out,1)
             out[k,e] = muladd(inv_dc,(c_field[k,c2] - c_field[k,c1]),out[k,e])
         end
+        end #inbounds
     end
     return out
 end
 
 function gradient_at_edge!(out::AbstractArray{<:Any,3},c_field,dc,cellsOnEdge)
-    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
+    @parallel for e in eachindex(cellsOnEdge)
+        @inbounds begin
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         for t in axes(out,3)
@@ -66,12 +77,14 @@ function gradient_at_edge!(out::AbstractArray{<:Any,3},c_field,dc,cellsOnEdge)
                 out[k,e,t] = inv_dc*(c_field[k,c2,t] - c_field[k,c1,t])
             end
         end
+        end #inbounds
     end
     return out
 end
 
 function gradient_at_edge!(out::AbstractArray{<:Any,3},op::F,c_field,dc,cellsOnEdge) where F<:Function
-    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
+    @parallel for e in eachindex(cellsOnEdge)
+        @inbounds begin
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         for t in axes(out,3)
@@ -79,12 +92,14 @@ function gradient_at_edge!(out::AbstractArray{<:Any,3},op::F,c_field,dc,cellsOnE
                 out[k,e,t] = op(out[k,e,t],inv_dc*(c_field[k,c2,t] - c_field[k,c1,t]))
             end
         end
+        end #inbounds
     end
     return out
 end
 
 function gradient_at_edge!(out::AbstractArray{<:Any,3},op::typeof(+),c_field,dc,cellsOnEdge)
-    @inbounds Threads.@threads for e in eachindex(cellsOnEdge)
+    @parallel for e in eachindex(cellsOnEdge)
+        @inbounds begin
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         for t in axes(out,3)
@@ -92,6 +107,7 @@ function gradient_at_edge!(out::AbstractArray{<:Any,3},op::typeof(+),c_field,dc,
                 out[k,e,t] = muladd(inv_dc,(c_field[k,c2,t] - c_field[k,c1,t]),out[k,e,t])
             end
         end
+        end #inbounds
     end
     return out
 end

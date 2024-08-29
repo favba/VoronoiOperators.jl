@@ -1,8 +1,32 @@
-abstract type CellKineticEnergyReconstruction{N_MAX,TI,TF} <: VoronoiOperator end
+abstract type KineticEnergyReconstruction <: NonLinearVoronoiOperator end
+name_input(::KineticEnergyReconstruction) = "edge"
+
+function (Vop::KineticEnergyReconstruction)(out_field::AbstractArray,in_field::AbstractArray)
+    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input) field"))
+    is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
+
+    square = @inline function (x); x*x;end
+    weighted_sum_transformation!(out_field, in_field, square, Vop.weights, Vop.indices)
+    
+    return out_field
+end
+
+function (Vop::KineticEnergyReconstruction)(out_field::AbstractArray, op::F, in_field::AbstractArray) where F<:Function
+    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
+    is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
+
+    square = @inline function (x); x*x;end
+    weighted_sum_transformation!(out_field, op, in_field, square, Vop.weights, Vop.indices)
+    
+    return out_field
+end
+
+abstract type CellKineticEnergyReconstruction{N_MAX,TI,TF} <: KineticEnergyReconstruction end
+name_output(::CellKineticEnergyReconstruction) = "cell"
 
 struct CellKineticEnergyRingler{N_MAX,TI,TF} <: CellKineticEnergyReconstruction{N_MAX,TI,TF}
-    nEdges::Int
-    edgesOnCell::Vector{ImmutableVector{N_MAX,TI}}
+    n::Int
+    indices::Vector{ImmutableVector{N_MAX,TI}}
     weights::Vector{ImmutableVector{N_MAX,TF}}
 end
 
@@ -36,38 +60,12 @@ end
 
 CellKineticEnergyRingler(m::VoronoiMesh) = CellKineticEnergyRingler(m.cells,m.edges)
 
-function (kc::CellKineticEnergyRingler)(c_field::AbstractArray,e_field::AbstractArray)
-    is_proper_size(e_field,kc.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-    is_proper_size(c_field,length(kc.edgesOnCell)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
-
-    square = @inline function (x); x*x;end
-    weighted_sum_transformation!(c_field,e_field,square,kc.weights, kc.edgesOnCell)
-    
-    return c_field
-end
-
-function (kc::CellKineticEnergyRingler)(e_field::AbstractArray)
-    is_proper_size(e_field,kc.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-    s = construct_new_node_index(size(e_field)...,length(kc.edgesOnCell))
-    c_field = similar(e_field,Base.promote_op(*,eltype(eltype(kc.weights)),eltype(e_field)),s)
-    return kc(c_field,e_field)
-end
-
-function (kc::CellKineticEnergyRingler)(c_field::AbstractArray,op::F,e_field::AbstractArray) where {F<:Function}
-    is_proper_size(e_field,kc.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-    is_proper_size(c_field,length(kc.edgesOnCell)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
-
-    square = @inline function (x); x*x;end
-    weighted_sum_transformation!(c_field,op,e_field,square,kc.weights, kc.edgesOnCell)
- 
-    return c_field
-end
-
-abstract type VertexKineticEnergyReconstruction{TI,TF} end
+abstract type VertexKineticEnergyReconstruction{TI,TF} <: KineticEnergyReconstruction end
+name_output(::VertexKineticEnergyReconstruction) = "vertex"
 
 struct VertexKineticEnergyGassmann{TI,TF} <: VertexKineticEnergyReconstruction{TI,TF}
-    nEdges::Int
-    edgesOnVertex::Vector{NTuple{3,TI}}
+    n::Int
+    indices::Vector{NTuple{3,TI}}
     weights::Vector{NTuple{3,TF}}
 end
 
@@ -97,33 +95,6 @@ function VertexKineticEnergyGassmann(vertices,edges)
 end
 
 VertexKineticEnergyGassmann(m::VoronoiMesh) = VertexKineticEnergyGassmann(m.vertices,m.edges)
-
-function (kv::VertexKineticEnergyGassmann)(v_field::AbstractArray,e_field::AbstractArray)
-    is_proper_size(e_field,kv.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-    is_proper_size(v_field,length(kv.edgesOnVertex)) || throw(DomainError(v_field,"Output array doesn't seem to be a vertex field"))
-
-    square = @inline function (x); x*x;end
-    weighted_sum_transformation!(v_field,e_field,square,kv.weights, kv.edgesOnVertex)
-    
-    return v_field
-end
-
-function (kv::VertexKineticEnergyGassmann)(e_field::AbstractArray)
-    is_proper_size(e_field,kv.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-    s = construct_new_node_index(size(e_field)...,length(kv.edgesOnVertex))
-    v_field = similar(e_field,Base.promote_op(*,eltype(eltype(kv.weights)),eltype(e_field)),s)
-    return kv(v_field,e_field)
-end
-
-function (kv::VertexKineticEnergyGassmann)(v_field::AbstractArray,op::F,e_field::AbstractArray) where {F<:Function}
-    is_proper_size(e_field,kv.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-    is_proper_size(v_field,length(kv.edgesOnVertex)) || throw(DomainError(v_field,"Output array doesn't seem to be a vertex field"))
-
-    square = @inline function (x); x*x;end
-    weighted_sum_transformation!(v_field,op,e_field,square,kv.weights, kv.edgesOnVertex)
- 
-    return v_field
-end
 
 function compute_weights_vertex_kinetic_energy_modified!(w,aV,Lev,dc,edgesOnVertex)
 
@@ -195,28 +166,28 @@ end
 
 function get_proper_kv(ckm::CellKineticEnergyMPAS,u::Vector{TF}) where TF
     if !isassigned(ckm.kv1d)
-        ckm.kv1d[] = Vector{TF}(undef,length(ckm.vertexReconstruction.edgesOnVertex))
+        ckm.kv1d[] = Vector{TF}(undef,length(ckm.vertexReconstruction.indices))
     end
     return ckm.kv1d[]
 end
 
 function get_proper_kv(ckm::CellKineticEnergyMPAS,u::Matrix{TF}) where TF
     if !isassigned(ckm.kv2d)
-        ckm.kv2d[] = Matrix{TF}(undef,size(u,1),length(ckm.vertexReconstruction.edgesOnVertex))
+        ckm.kv2d[] = Matrix{TF}(undef,size(u,1),length(ckm.vertexReconstruction.indices))
     end
     return ckm.kv2d[]
 end
 
 function get_proper_kv(ckm::CellKineticEnergyMPAS,u::Array{TF,3}) where TF
     if !isassigned(ckm.kv3d)
-        ckm.kv3d[] = Array{TF,3}(undef,size(u,1),length(ckm.vertexReconstruction.edgesOnVertex),size(u,3))
+        ckm.kv3d[] = Array{TF,3}(undef,size(u,1),length(ckm.vertexReconstruction.indices),size(u,3))
     end
     return ckm.kv3d[]
 end
 
 function (ckm::CellKineticEnergyMPAS)(c_field::AbstractArray,u::AbstractArray)
-    is_proper_size(c_field,length(ckm.weightsVertexToCell)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
-    is_proper_size(u,ckm.RinglerReconstruction.nEdges) || throw(DomainError(u,"Input array doesn't seem to be an edge field"))
+    is_proper_size(c_field,length(ckm.weightsVertexToCell)) || throw(DimensionMismatch("Output array doesn't seem to be a cell field"))
+    is_proper_size(u,ckm.RinglerReconstruction.n) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
 
     kv = get_proper_kv(ckm,u)
     ckm.vertexReconstruction(kv,u)
@@ -232,15 +203,15 @@ function (ckm::CellKineticEnergyMPAS)(c_field::AbstractArray,u::AbstractArray)
 end
 
 function (kc::CellKineticEnergyMPAS)(e_field::AbstractArray)
-    is_proper_size(e_field,kc.RinglerReconstruction.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-    s = construct_new_node_index(size(e_field)...,length(kc.RinglerReconstruction.edgesOnCell))
+    is_proper_size(e_field,kc.RinglerReconstruction.n) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
+    s = construct_new_node_index(size(e_field)...,length(kc.RinglerReconstruction.indices))
     c_field = similar(e_field,Base.promote_op(*,eltype(eltype(kc.RinglerReconstruction.weights)),eltype(e_field)),s)
     return kc(c_field,e_field)
 end
 
 function (ckm::CellKineticEnergyMPAS)(c_field::AbstractArray,op::F,u::AbstractArray) where F<:Union{typeof(Base.:+),typeof(Base.:-)}
-    is_proper_size(c_field,length(ckm.weightsVertexToCell)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
-    is_proper_size(u,ckm.RinglerReconstruction.nEdges) || throw(DomainError(u,"Input array doesn't seem to be an edge field"))
+    is_proper_size(c_field,length(ckm.weightsVertexToCell)) || throw(DimensionMismatch("Output array doesn't seem to be a cell field"))
+    is_proper_size(u,ckm.RinglerReconstruction.n) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
 
     kv = get_proper_kv(ckm,u)
     ckm.vertexReconstruction(kv,u)
@@ -267,8 +238,8 @@ end
 CellKineticEnergyPerot(mesh::VoronoiMesh) = CellKineticEnergyVelRecon(CellVelocityReconstructionPerot(mesh))
 
 function (kc::CellKineticEnergyVelRecon)(c_field::AbstractArray,e_field::AbstractArray)
-    is_proper_size(e_field,kc.uR.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-    is_proper_size(c_field,length(kc.uR.edgesOnCell)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
+    is_proper_size(e_field,kc.uR.n) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
+    is_proper_size(c_field,length(kc.uR.indices)) || throw(DimensionMismatch("Output array doesn't seem to be a cell field"))
 
     energy = @inline function (y,x); 0.5*(x⋅x);end
     kc.uR(c_field,energy,e_field)
@@ -277,15 +248,15 @@ function (kc::CellKineticEnergyVelRecon)(c_field::AbstractArray,e_field::Abstrac
 end
 
 function (kc::CellKineticEnergyVelRecon)(e_field::AbstractArray)
-    is_proper_size(e_field,kc.uR.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-    s = construct_new_node_index(size(e_field)...,length(kc.uR.edgesOnCell))
+    is_proper_size(e_field,kc.uR.n) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
+    s = construct_new_node_index(size(e_field)...,length(kc.uR.indices))
     c_field = similar(e_field,Base.promote_op(dot,eltype(eltype(kc.uR.weights)),eltype(eltype(kc.uR.weights))),s)
     return kc(c_field,e_field)
 end
 
 function (kc::CellKineticEnergyVelRecon)(c_field::AbstractArray,op::F,e_field::AbstractArray) where {F<:Function}
-    is_proper_size(e_field,kc.uR.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-    is_proper_size(c_field,length(kc.uR.edgesOnCell)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
+    is_proper_size(e_field,kc.uR.n) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
+    is_proper_size(c_field,length(kc.uR.indices)) || throw(DimensionMismatch("Output array doesn't seem to be a cell field"))
 
     energy = @inline function (y,x); op(y,0.5*(x⋅x));end
     kc.uR(c_field,energy,e_field)

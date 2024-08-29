@@ -1,4 +1,4 @@
-abstract type FilteringOperator <: VoronoiOperator end
+abstract type FilteringOperator <: LinearVoronoiOperator end
 
 using OrderedCollections
 
@@ -7,6 +7,9 @@ struct CellBoxFilter{N_MAX,TI,TF,TW<:Union{TF,Vector{TF}}} <: FilteringOperator
     indices::Vector{ImmutableVector{N_MAX,TI}}
     width::TW
 end
+name_input(::CellBoxFilter) = "cell"
+name_output(::CellBoxFilter) = "cell"
+n_input(a::CellBoxFilter) = length(a.indices)
 
 function in_circle(c, r2, p)
     cp = p - c
@@ -235,28 +238,4 @@ function CellBoxFilter(mesh::VoronoiMesh{false}, variable_resolution::Bool=false
         end
         return CellBoxFilter(mesh, f)
     end
-end
-
-function (cellFilter::CellBoxFilter)(c_field::AbstractArray, e_field::AbstractArray)
-    is_proper_size(e_field, length(cellFilter.weights)) || throw(DomainError(c_field, "Input array doesn't seem to be a cell field"))
-    is_proper_size(c_field, length(cellFilter.weights)) || throw(DomainError(c_field, "Output array doesn't seem to be a cell field"))
-
-    weighted_sum_transformation!(c_field, e_field, cellFilter.weights, cellFilter.indices)
-
-    return c_field
-end
-
-function (cellFilter::CellBoxFilter)(e_field::AbstractArray)
-    is_proper_size(e_field, length(cellFilter.weights)) || throw(DomainError(e_field, "Input array doesn't seem to be a cell field"))
-    c_field = similar(e_field, Base.promote_op(*, eltype(eltype(cellFilter.weights)), eltype(e_field)))
-    return cellFilter(c_field, e_field)
-end
-
-function (cellFilter::CellBoxFilter)(c_field::AbstractArray, op::F, e_field::AbstractArray) where {F<:Function}
-    is_proper_size(e_field, length(cellFilter.weights)) || throw(DomainError(c_field, "Input array doesn't seem to be a cell field"))
-    is_proper_size(c_field, length(cellFilter.weights)) || throw(DomainError(c_field, "Output array doesn't seem to be a cell field"))
-
-    weighted_sum_transformation!(c_field, op, e_field, cellFilter.weights, cellFilter.indices)
-
-    return c_field
 end

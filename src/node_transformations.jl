@@ -1,76 +1,65 @@
-abstract type VertexToEdgeTransformation <: VoronoiOperator end
+abstract type VertexToEdgeTransformation <: LinearVoronoiOperator end
 
-abstract type CellToEdgeTransformation <: VoronoiOperator end
+name_input(::VertexToEdgeTransformation) = "vertex"
+name_output(::VertexToEdgeTransformation) = "edge"
+
 
 struct VertexToEdgeMean{TI} <: VertexToEdgeTransformation
     n::Int
-    verticesOnEdge::Vector{NTuple{2,TI}}
+    indices::Vector{NTuple{2,TI}}
 end
 
 VertexToEdgeMean(vertices::Union{<:VertexBase,<:VertexInfo},edges::Union{<:EdgeBase,<:EdgeInfo}) = VertexToEdgeMean(vertices.n,edges.indices.vertices)
 VertexToEdgeMean(mesh::VoronoiMesh) = VertexToEdgeMean(mesh.vertices.base,mesh.edges.base)
 
-@inbounds @inline (v2e::VertexToEdgeMean)(v_field::AbstractArray{<:Any,N},inds::Vararg{T,N}) where {N,T<:Integer} = to_mean_transformation(v_field,inds,v2e.verticesOnEdge)
+@inbounds @inline (v2e::VertexToEdgeMean)(v_field::AbstractArray{<:Any,N},inds::Vararg{T,N}) where {N,T<:Integer} = to_mean_transformation(v_field,inds,v2e.indices)
 
 function (v2e::VertexToEdgeMean)(e_field::AbstractArray,v_field::AbstractArray)
     is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
-    is_proper_size(e_field,length(v2e.verticesOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
+    is_proper_size(e_field,length(v2e.indices)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
 
-    to_mean_transformation!(e_field,v_field,v2e.verticesOnEdge)
+    to_mean_transformation!(e_field,v_field,v2e.indices)
     
     return e_field
 end
 
 function (v2e::VertexToEdgeMean)(v_field::AbstractArray)
     is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
-    s = construct_new_node_index(size(v_field)...,length(v2e.verticesOnEdge))
+    s = construct_new_node_index(size(v_field)...,length(v2e.indices))
     e_field = similar(v_field,s)
     return v2e(e_field,v_field)
 end
 
 function (v2e::VertexToEdgeMean)(e_field::AbstractArray,op::F,v_field::AbstractArray) where {F<:Function}
     is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
-    is_proper_size(e_field,length(v2e.verticesOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
+    is_proper_size(e_field,length(v2e.indices)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
 
-    to_mean_transformation!(e_field,op,v_field,v2e.verticesOnEdge)
+    to_mean_transformation!(e_field,op,v_field,v2e.indices)
    
     return e_field
 end
 
 struct VertexToEdgeWeighted{TI,TF} <: VertexToEdgeTransformation
     n::Int
-    verticesOnEdge::Vector{NTuple{2,TI}}
+    indices::Vector{NTuple{2,TI}}
     weights::Vector{NTuple{2,TF}}
-end
-
-function (v2e::VertexToEdgeWeighted)(e_field::AbstractArray,v_field::AbstractArray)
-    is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
-    is_proper_size(e_field,length(v2e.verticesOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
-
-    weighted_sum_transformation!(e_field,v_field,v2e.weights, v2e.verticesOnEdge)
-    
-    return e_field
-end
-
-function (v2e::VertexToEdgeWeighted)(v_field::AbstractArray)
-    is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
-    s = construct_new_node_index(size(v_field)...,length(v2e.verticesOnEdge))
-    e_field = similar(v_field,s)
-    return v2e(e_field,v_field)
-end
-
-function (v2e::VertexToEdgeWeighted)(e_field::AbstractArray,op::F,v_field::AbstractArray) where {F<:Function}
-    is_proper_size(v_field,v2e.n) || throw(DomainError(v_field,"Input array doesn't seem to be a vertex field"))
-    is_proper_size(e_field,length(v2e.verticesOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
-
-    weighted_sum_transformation!(e_field, op, v_field, v2e.weights, v2e.verticesOnEdge)
-
-    return e_field
 end
 
 struct VertexToEdgeInterpolation{TI,TF} <: VertexToEdgeTransformation
     base::VertexToEdgeWeighted{TI,TF}
     VertexToEdgeInterpolation(base::VertexToEdgeWeighted{TI,TF}) where {TI,TF} = new{TI,TF}(base)
+end
+
+function Base.getproperty(v2e::VertexToEdgeInterpolation,s::Symbol)
+    if s === :n
+        return (getfield(v2e,:base)).n
+    elseif s === :indices
+        return (getfield(v2e,:base)).indices
+    elseif s === :weights
+        return (getfield(v2e,:base)).weights
+    else
+        return getfield(v2e,s)
+    end
 end
 
 function compute_interpolation_weights_vertex_to_edge_periodic(epos,vpos,voe,dvEdge,xp::Number,yp::Number)
@@ -99,13 +88,21 @@ end
 
 VertexToEdgeInterpolation(mesh::VoronoiMesh{false}) = VertexToEdgeInterpolation(mesh.vertices.base,mesh.edges,mesh.attributes[:x_period]::Float64,mesh.attributes[:y_period]::Float64)
 
-(v2e::VertexToEdgeInterpolation)(e_field::AbstractArray,v_field::AbstractArray) = v2e.base(e_field,v_field)
-(v2e::VertexToEdgeInterpolation)(v_field::AbstractArray) = v2e.base(v_field)
-(v2e::VertexToEdgeInterpolation)(e_field::AbstractArray,op::F,v_field::AbstractArray) where {F<:Function} = v2e.base(e_field,op,v_field)
-
 struct VertexToEdgePiecewise{TI,TF} <: VertexToEdgeTransformation
     base::VertexToEdgeWeighted{TI,TF}
     VertexToEdgePiecewise(base::VertexToEdgeWeighted{TI,TF}) where {TI,TF} = new{TI,TF}(base)
+end
+
+function Base.getproperty(v2e::VertexToEdgePiecewise,s::Symbol)
+    if s === :n
+        return (getfield(v2e,:base)).n
+    elseif s === :indices
+        return (getfield(v2e,:base)).indices
+    elseif s === :weights
+        return (getfield(v2e,:base)).weights
+    else
+        return getfield(v2e,s)
+    end
 end
 
 function VertexToEdgePiecewise(vertices::Union{<:VertexBase{false},<:VertexInfo{false}},edges::EdgeInfo{false},xp::Number,yp::Number)
@@ -116,13 +113,21 @@ end
 
 VertexToEdgePiecewise(mesh::VoronoiMesh{false}) = VertexToEdgePiecewise(mesh.vertices.base,mesh.edges,mesh.attributes[:x_period]::Float64,mesh.attributes[:y_period]::Float64)
 
-(v2e::VertexToEdgePiecewise)(e_field::AbstractArray,v_field::AbstractArray) = v2e.base(e_field,v_field)
-(v2e::VertexToEdgePiecewise)(v_field::AbstractArray) = v2e.base(v_field)
-(v2e::VertexToEdgePiecewise)(e_field::AbstractArray,op::F,v_field::AbstractArray) where {F<:Function} = v2e.base(e_field,op,v_field)
-
 struct VertexToEdgeArea{TI,TF} <: VertexToEdgeTransformation
     base::VertexToEdgeWeighted{TI,TF}
     VertexToEdgeArea(base::VertexToEdgeWeighted{TI,TF}) where {TI,TF} = new{TI,TF}(base)
+end
+
+function Base.getproperty(v2e::VertexToEdgeArea,s::Symbol)
+    if s === :n
+        return (getfield(v2e,:base)).n
+    elseif s === :indices
+        return (getfield(v2e,:base)).indices
+    elseif s === :weights
+        return (getfield(v2e,:base)).weights
+    else
+        return getfield(v2e,s)
+    end
 end
 
 function compute_area_weights_vertex_to_edge(voe,areaTriangles)
@@ -146,48 +151,49 @@ end
 
 VertexToEdgeArea(mesh::VoronoiMesh) = VertexToEdgeArea(mesh.vertices,mesh.edges.base)
 
-(v2e::VertexToEdgeArea)(e_field::AbstractArray,v_field::AbstractArray) = v2e.base(e_field,v_field)
-(v2e::VertexToEdgeArea)(v_field::AbstractArray) = v2e.base(v_field)
-(v2e::VertexToEdgeArea)(e_field::AbstractArray,op::F,v_field::AbstractArray) where {F<:Function} = v2e.base(e_field,op,v_field)
+abstract type CellToEdgeTransformation <: LinearVoronoiOperator end
+
+name_input(::CellToEdgeTransformation) = "cell"
+name_output(::CellToEdgeTransformation) = "edge"
 
 struct CellToEdgeMean{TI} <: CellToEdgeTransformation
     n::Int
-    cellsOnEdge::Vector{NTuple{2,TI}}
+    indices::Vector{NTuple{2,TI}}
 end
 
 CellToEdgeMean(cells::Union{<:CellBase,<:CellInfo},edges::Union{<:EdgeBase,<:EdgeInfo}) = CellToEdgeMean(cells.n,edges.indices.cells)
 CellToEdgeMean(mesh::VoronoiMesh) = CellToEdgeMean(mesh.cells.base,mesh.edges.base)
 
-@inbounds @inline (c2e::CellToEdgeMean)(c_field::AbstractArray{<:Any,N},inds::Vararg{T,N}) where {N,T<:Integer} = to_mean_transformation(c_field,inds,c2e.cellsOnEdge)
+@inbounds @inline (c2e::CellToEdgeMean)(c_field::AbstractArray{<:Any,N},inds::Vararg{T,N}) where {N,T<:Integer} = to_mean_transformation(c_field,inds,c2e.indices)
 
 function (c2e::CellToEdgeMean)(e_field::AbstractArray,c_field::AbstractArray)
     is_proper_size(c_field,c2e.n) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
-    is_proper_size(e_field,length(c2e.cellsOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
+    is_proper_size(e_field,length(c2e.indices)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
 
-    to_mean_transformation!(e_field,c_field,c2e.cellsOnEdge)
+    to_mean_transformation!(e_field,c_field,c2e.indices)
     
     return e_field
 end
 
 function (c2e::CellToEdgeMean)(c_field::AbstractArray)
     is_proper_size(c_field,c2e.n) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
-    s = construct_new_node_index(size(c_field)...,length(c2e.cellsOnEdge))
+    s = construct_new_node_index(size(c_field)...,length(c2e.indices))
     e_field = similar(c_field,s)
     return c2e(e_field,c_field)
 end
 
 function (c2e::CellToEdgeMean)(e_field::AbstractArray,op::F,c_field::AbstractArray) where {F<:Function}
     is_proper_size(c_field,c2e.n) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
-    is_proper_size(e_field,length(c2e.cellsOnEdge)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
+    is_proper_size(e_field,length(c2e.indices)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
 
-    to_mean_transformation!(e_field,op,c_field,c2e.cellsOnEdge)
+    to_mean_transformation!(e_field,op,c_field,c2e.indices)
 
     return e_field
 end
 
 struct CellToEdgeBaricentric{TI,TF} <: CellToEdgeTransformation
     n::Int
-    cellsOnEdgeBaricentric::Vector{NTuple{3,TI}}
+    indices::Vector{NTuple{3,TI}}
     weights::Vector{NTuple{3,TF}}
 end
 
@@ -259,27 +265,3 @@ function CellToEdgeBaricentric(m::VoronoiMesh{false})
     return CellToEdgeBaricentric(ncells,cellsOnEdgeBaricentric,weights)
 end
 
-function (c2e::CellToEdgeBaricentric)(e_field::AbstractArray,c_field::AbstractArray)
-    is_proper_size(c_field,c2e.n) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
-    is_proper_size(e_field,length(c2e.cellsOnEdgeBaricentric)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
-
-    weighted_sum_transformation!(e_field,c_field,c2e.weights, c2e.cellsOnEdgeBaricentric)
-    
-    return e_field
-end
-
-function (c2e::CellToEdgeBaricentric)(c_field::AbstractArray)
-    is_proper_size(c_field,c2e.n) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
-    s = construct_new_node_index(size(c_field)...,length(c2e.cellsOnEdgeBaricentric))
-    e_field = similar(c_field,s)
-    return c2e(e_field,c_field)
-end
-
-function (c2e::CellToEdgeBaricentric)(e_field::AbstractArray,op::F,c_field::AbstractArray) where {F<:Function}
-    is_proper_size(c_field,c2e.n) || throw(DomainError(c_field,"Input array doesn't seem to be a cell field"))
-    is_proper_size(e_field,length(c2e.cellsOnEdgeBaricentric)) || throw(DomainError(e_field,"Output array doesn't seem to be an edge field"))
-
-    weighted_sum_transformation!(e_field, op, c_field, c2e.weights, c2e.cellsOnEdgeBaricentric)
-
-    return e_field
-end

@@ -1,8 +1,10 @@
-abstract type CellVelocityReconstruction{N_MAX,TF,TI} <: VoronoiOperator end
+abstract type CellVelocityReconstruction{N_MAX,TF,TI} <: LinearVoronoiOperator end
+name_input(::CellVelocityReconstruction) = "edge"
+name_output(::CellVelocityReconstruction) = "cell"
 
 struct CellVelocityReconstructionPerot{N_MAX,TF,TI} <: CellVelocityReconstruction{N_MAX,TF,TI}
-    nEdges::Int
-    edgesOnCell::Vector{ImmutableVector{N_MAX,TI}}
+    n::Int
+    indices::Vector{ImmutableVector{N_MAX,TI}}
     weights::Vector{ImmutableVector{N_MAX,Vec2Dxy{TF}}}
 end
 
@@ -41,29 +43,4 @@ end
 function CellVelocityReconstructionPerot(mesh::VoronoiMesh) 
     isdefined(mesh.edges,:normalVectors) || compute_edge_normals!(mesh)
     CellVelocityReconstructionPerot(mesh.cells,mesh.edges,mesh.vertices,mesh.attributes[:x_period]::Float64,mesh.attributes[:y_period]::Float64)
-end
-
-function (uR::CellVelocityReconstructionPerot)(c_field::AbstractArray,e_field::AbstractArray)
-    is_proper_size(c_field,length(uR.weights)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
-    is_proper_size(e_field,uR.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-
-    weighted_sum_transformation!(c_field,e_field,uR.weights, uR.edgesOnCell)
-    
-    return c_field
-end
-
-function (uR::CellVelocityReconstructionPerot)(e_field::AbstractArray)
-    is_proper_size(e_field,uR.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-    s = construct_new_node_index(size(e_field)...,length(uR.edgesOnCell))
-    c_field = similar(e_field,eltype(eltype(uR.weights)),s)
-    return uR(c_field,e_field)
-end
-
-function (uR::CellVelocityReconstructionPerot)(c_field::AbstractArray,op::F,e_field::AbstractArray) where {F<:Function}
-    is_proper_size(c_field,length(uR.edgesOnCell)) || throw(DomainError(c_field,"Output array doesn't seem to be a cell field"))
-    is_proper_size(e_field,uR.nEdges) || throw(DomainError(e_field,"Input array doesn't seem to be an edge field"))
-
-    weighted_sum_transformation!(c_field, op, e_field, uR.weights, uR.edgesOnCell)
-
-    return c_field
 end

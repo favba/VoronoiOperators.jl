@@ -11,6 +11,7 @@ export CellVelocityReconstruction,CellVelocityReconstructionPerot
 export CellKineticEnergyMPAS, CellKineticEnergyRingler, CellKineticEnergyVelRecon, CellKineticEnergyPerot
 export GradientAtEdge, DivAtCell
 export CellBoxFilter
+export TangentialVelocityReconstructionThuburn
 
 include("utils.jl")
 
@@ -79,5 +80,6 @@ include("cell_velocity_reconstruction.jl")
 include("kinetic_energy_reconstruction.jl")
 include("differential_operators.jl")
 include("filtering_operators.jl")
+include("tangential_velocity_reconstruction.jl")
 
 end

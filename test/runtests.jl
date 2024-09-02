@@ -14,6 +14,8 @@ const ncells = mesh_iso.cells.n
 const nvertex = mesh_iso.vertices.n
 const nedges = mesh_iso.edges.n
 
+const v = 3.0𝐢 + 4.0𝐣
+
 @testset "Vertex to Edge Transformations" begin
 
     vert_const_field1D = ones(nvertex)
@@ -67,7 +69,6 @@ end
 
 end
 
-const v = 3.0𝐢 + 4.0𝐣
 
 @testset "Cell Velocity / Kinetic Energy Reconstruction" begin
     for mesh in (mesh_iso, mesh_distorted)
@@ -185,6 +186,31 @@ end
             @test all(isapprox(1.0𝐢 + 1.0𝐣), VariableFilter(field))
             e_field = VariableFilter(field)
             @test all(isapprox(2.0𝐢 + 2.0𝐣), VariableFilter(e_field, +, field))
+        end
+    end
+end
+
+@testset "Tangential Velocity Reconstruction" begin
+    for mesh in (mesh_iso, mesh_distorted)
+        isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
+        ue1D = dot.(mesh.edges.normalVectors, (v,))
+        isdefined(mesh.edges, :tangentialVectors) || compute_edge_tangents!(mesh)
+        ut1D = dot.(mesh.edges.tangentialVectors, (v,))
+        ue2D = similar(ue1D, (8, nedges))
+        ut2D = similar(ut1D, (8, nedges))
+        ue3D = similar(ue1D, (8, nedges, 2))
+        ut3D = similar(ut1D, (8, nedges, 2))
+        for k in 1:8
+            ue2D[k, :] .= ue1D
+            ut2D[k, :] .= ut1D
+        end
+        for t in 1:2
+            ue3D[:, :, t] .= ue2D
+            ut3D[:, :, t] .= ut2D
+        end
+        tvr = TangentialVelocityReconstructionThuburn(mesh)
+        for (utND,ueND) in ((ut1D,ue1D), (ut2D,ue2D), (ut3D,ue3D))
+            @test all(map((x,y) -> isapprox(x, y; atol=2.0), utND, tvr(ueND)))
         end
     end
 end

@@ -2,6 +2,7 @@ module VoronoiOperators
 
 using TensorsLite, TensorsLiteGeometry, ImmutableVectors, VoronoiMeshDataStruct
 using TaskLocalValues
+import SIMD as sd
 
 export VertexToEdgeTransformation, VertexToEdgeMean, VertexToEdgeInterpolation, VertexToEdgePiecewise, VertexToEdgeArea
 export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric
@@ -24,53 +25,32 @@ abstract type NonLinearVoronoiOperator <: VoronoiOperator end
 
 abstract type LinearVoronoiOperator <: VoronoiOperator end
 
-function (Vop::LinearVoronoiOperator)(out_field::AbstractArray,in_field::AbstractArray)
+function (Vop::LinearVoronoiOperator)(out_field::AbstractArray,in_field::AbstractArray, op::F=Base.identity) where {F<:Function}
     is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input) field"))
     is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
 
-    weighted_sum_transformation!(out_field, in_field, Vop.weights, Vop.indices)
+    weighted_sum_transformation!(out_field, in_field, Vop.weights, Vop.indices, op)
     
     return out_field
 end
 
-function (Vop::LinearVoronoiOperator)(out_field::AbstractArray, op::F, in_field::AbstractArray) where F<:Function
+function (Vop::LinearVoronoiOperator)(out_field::AbstractArray, op_out::F, in_field::AbstractArray, op::F2=Base.identity) where {F<:Function, F2<:Function}
     is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
     is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
 
-    weighted_sum_transformation!(out_field, op, in_field, Vop.weights, Vop.indices)
+    weighted_sum_transformation!(out_field, op_out, in_field, Vop.weights, Vop.indices, op)
     
     return out_field
 end
 
-function (Vop::LinearVoronoiOperator)(out_field::AbstractArray, in_field::AbstractArray, op::F) where F<:Function
-    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
-    is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
+my_similar(in_field, T, s) = similar(in_field, T, s)
+my_similar(in_field, ::Type{T}, s) where T<:Vec2Dxy = VecArray(x=similar(in_field,nonzero_eltype(T),s), y=similar(in_field,nonzero_eltype(T),s))
+my_similar(in_field, ::Type{T}, s) where T<:Vec3D = VecArray(x=similar(in_field,nonzero_eltype(T),s), y=similar(in_field,nonzero_eltype(T),s), z=similar(in_field,nonzero_eltype(T),s))
 
-    weighted_sum_transformation!(out_field, in_field, op, Vop.weights, Vop.indices)
-    
-    return out_field
-end
-
-function (Vop::LinearVoronoiOperator)(out_field::AbstractArray, op::F, in_field::AbstractArray, op2::F2) where {F<:Function,F2<:Function}
-    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
-    is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
-
-    weighted_sum_transformation!(out_field, op, in_field, op2, Vop.weights, Vop.indices)
-    
-    return out_field
-end
-
-function (Vop::VoronoiOperator)(in_field::AbstractArray)
+function (Vop::LinearVoronoiOperator)(in_field::AbstractArray, op::F=Base.identity) where {F<:Function}
     is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
     s = construct_new_node_index(size(in_field)..., n_output(Vop))
-    out_field = similar(in_field, Base.promote_op(*, eltype(eltype(Vop.weights)), eltype(in_field)), s)
-    return Vop(out_field, in_field)
-end
-
-function (Vop::LinearVoronoiOperator)(in_field::AbstractArray, op::F) where F<:Function
-    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
-    s = construct_new_node_index(size(in_field)..., n_output(Vop))
-    out_field = similar(in_field, Base.promote_op(*, eltype(eltype(Vop.weights)), Base.promote_op(op,eltype(in_field))), s)
+    out_field = my_similar(in_field, Base.promote_op(*, eltype(eltype(Vop.weights)), Base.promote_op(op,eltype(in_field))), s)
     return Vop(out_field, in_field, op)
 end
 

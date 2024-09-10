@@ -33,7 +33,7 @@ function gradient_at_edge!(out::AbstractMatrix,c_field,dc,cellsOnEdge)
         @inbounds begin
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
-        @simd for k in axes(out,1)
+        @simd ivdep for k in axes(out,1)
             out[k,e] = inv_dc*(c_field[k,c2] - c_field[k,c1])
         end
         end #inbounds
@@ -46,7 +46,7 @@ function gradient_at_edge!(out::AbstractMatrix,op::F,c_field,dc,cellsOnEdge) whe
         @inbounds begin
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
-        @simd for k in axes(out,1)
+        @simd ivdep for k in axes(out,1)
             out[k,e] = op(out[k,e],inv_dc*(c_field[k,c2] - c_field[k,c1]))
         end
         end #inbounds
@@ -59,7 +59,7 @@ function gradient_at_edge!(out::AbstractMatrix,op::typeof(+),c_field,dc,cellsOnE
         @inbounds begin
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
-        @simd for k in axes(out,1)
+        @simd ivdep for k in axes(out,1)
             out[k,e] = muladd(inv_dc,(c_field[k,c2] - c_field[k,c1]),out[k,e])
         end
         end #inbounds
@@ -73,7 +73,7 @@ function gradient_at_edge!(out::AbstractArray{<:Any,3},c_field,dc,cellsOnEdge)
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         for t in axes(out,3)
-            @simd for k in axes(out,1)
+            @simd ivdep for k in axes(out,1)
                 out[k,e,t] = inv_dc*(c_field[k,c2,t] - c_field[k,c1,t])
             end
         end
@@ -88,7 +88,7 @@ function gradient_at_edge!(out::AbstractArray{<:Any,3},op::F,c_field,dc,cellsOnE
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         for t in axes(out,3)
-            @simd for k in axes(out,1)
+            @simd ivdep for k in axes(out,1)
                 out[k,e,t] = op(out[k,e,t],inv_dc*(c_field[k,c2,t] - c_field[k,c1,t]))
             end
         end
@@ -103,7 +103,7 @@ function gradient_at_edge!(out::AbstractArray{<:Any,3},op::typeof(+),c_field,dc,
         c1,c2 = cellsOnEdge[e]
         inv_dc = inv(dc[e])
         for t in axes(out,3)
-            @simd for k in axes(out,1)
+            @simd ivdep for k in axes(out,1)
                 out[k,e,t] = muladd(inv_dc,(c_field[k,c2,t] - c_field[k,c1,t]),out[k,e,t])
             end
         end

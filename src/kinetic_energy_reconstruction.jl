@@ -1,22 +1,29 @@
 abstract type KineticEnergyReconstruction <: NonLinearVoronoiOperator end
 name_input(::KineticEnergyReconstruction) = "edge"
 
+@inline square(x) = x*x
+
 function (Vop::KineticEnergyReconstruction)(out_field::AbstractArray,in_field::AbstractArray)
     is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input) field"))
     is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
 
-    square = @inline function (x); x*x;end
-    weighted_sum_transformation!(out_field, in_field, square, Vop.weights, Vop.indices)
+    weighted_sum_transformation!(out_field, in_field, Vop.weights, Vop.indices, square)
     
     return out_field
+end
+
+function (Vop::KineticEnergyReconstruction)(in_field::AbstractArray)
+    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
+    s = construct_new_node_index(size(in_field)..., n_output(Vop))
+    out_field = my_similar(in_field, Base.promote_op(*, eltype(eltype(Vop.weights)), Base.promote_op(square,eltype(in_field))), s)
+    return Vop(out_field, in_field)
 end
 
 function (Vop::KineticEnergyReconstruction)(out_field::AbstractArray, op::F, in_field::AbstractArray) where F<:Function
     is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
     is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
 
-    square = @inline function (x); x*x;end
-    weighted_sum_transformation!(out_field, op, in_field, square, Vop.weights, Vop.indices)
+    weighted_sum_transformation!(out_field, op, in_field, Vop.weights, Vop.indices, square)
     
     return out_field
 end
@@ -185,6 +192,12 @@ function get_proper_kv(ckm::CellKineticEnergyMPAS,u::Array{TF,3}) where TF
     return ckm.kv3d[]
 end
 
+struct Combination{T} <: Function
+    a::T
+end
+
+@inline (L::Combination)(x,y) = muladd(L.a, (x-y), y)
+    
 function (ckm::CellKineticEnergyMPAS)(c_field::AbstractArray,u::AbstractArray)
     is_proper_size(c_field,length(ckm.weightsVertexToCell)) || throw(DimensionMismatch("Output array doesn't seem to be a cell field"))
     is_proper_size(u,ckm.RinglerReconstruction.n) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
@@ -193,9 +206,7 @@ function (ckm::CellKineticEnergyMPAS)(c_field::AbstractArray,u::AbstractArray)
     ckm.vertexReconstruction(kv,u)
     ckm.RinglerReconstruction(c_field,u)
 
-    f = let α=ckm.alpha, β = 1.0 - α
-        @inline function (x,y); α*x + β*y;end
-    end
+    f = Combination(ckm.alpha)
 
     weighted_sum_transformation!(c_field,f,kv,ckm.weightsVertexToCell,ckm.verticesOnCell)
 
@@ -205,9 +216,16 @@ end
 function (kc::CellKineticEnergyMPAS)(e_field::AbstractArray)
     is_proper_size(e_field,kc.RinglerReconstruction.n) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
     s = construct_new_node_index(size(e_field)...,length(kc.RinglerReconstruction.indices))
-    c_field = similar(e_field,Base.promote_op(*,eltype(eltype(kc.RinglerReconstruction.weights)),eltype(e_field)),s)
+    c_field = my_similar(e_field,Base.promote_op(*,eltype(eltype(kc.RinglerReconstruction.weights)),eltype(e_field)),s)
     return kc(c_field,e_field)
 end
+
+struct OpAtimes{F,T} <: Function
+    op::F
+    a::T
+end
+
+@inline (O::OpAtimes)(x,y) = O.op(x,O.a*y)
 
 function (ckm::CellKineticEnergyMPAS)(c_field::AbstractArray,op::F,u::AbstractArray) where F<:Union{typeof(Base.:+),typeof(Base.:-)}
     is_proper_size(c_field,length(ckm.weightsVertexToCell)) || throw(DimensionMismatch("Output array doesn't seem to be a cell field"))
@@ -216,15 +234,11 @@ function (ckm::CellKineticEnergyMPAS)(c_field::AbstractArray,op::F,u::AbstractAr
     kv = get_proper_kv(ckm,u)
     ckm.vertexReconstruction(kv,u)
 
-    f1 = let op=op, α = ckm.alpha
-        @inline function (x,y); op(x,α*y);end
-    end
-
+    f1 = OpAtimes(op,ckm.alpha)
+    
     ckm.RinglerReconstruction(c_field, f1, u)
 
-    f2 = let op=op, β = 1.0 - ckm.alpha
-        @inline function (x,y);  op(x,β*y);end
-    end
+    f2 = OpAtimes(op,1.0-ckm.alpha)
 
     weighted_sum_transformation!(c_field,f2,kv,ckm.weightsVertexToCell,ckm.verticesOnCell)
 
@@ -237,12 +251,14 @@ end
 
 CellKineticEnergyPerot(mesh::VoronoiMesh) = CellKineticEnergyVelRecon(CellVelocityReconstructionPerot(mesh))
 
+@inline kinetic_energy(x) = 0.5*(x⋅x)
+@inline kinetic_energy(y,x) = 0.5*(x⋅x)
+
 function (kc::CellKineticEnergyVelRecon)(c_field::AbstractArray,e_field::AbstractArray)
     is_proper_size(e_field,kc.uR.n) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
     is_proper_size(c_field,length(kc.uR.indices)) || throw(DimensionMismatch("Output array doesn't seem to be a cell field"))
 
-    energy = @inline function (y,x); 0.5*(x⋅x);end
-    kc.uR(c_field,energy,e_field)
+    kc.uR(c_field,kinetic_energy,e_field)
     
     return c_field
 end
@@ -250,16 +266,22 @@ end
 function (kc::CellKineticEnergyVelRecon)(e_field::AbstractArray)
     is_proper_size(e_field,kc.uR.n) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
     s = construct_new_node_index(size(e_field)...,length(kc.uR.indices))
-    c_field = similar(e_field,Base.promote_op(dot,eltype(eltype(kc.uR.weights)),eltype(eltype(kc.uR.weights))),s)
+    c_field = my_similar(e_field,Base.promote_op(dot,eltype(eltype(kc.uR.weights)),eltype(eltype(kc.uR.weights))),s)
     return kc(c_field,e_field)
 end
+
+struct OpKineticEnergy{F} <: Function
+    op::F
+end
+
+@inline (O::OpKineticEnergy)(x,y) = O.op(x,kinetic_energy(y))
 
 function (kc::CellKineticEnergyVelRecon)(c_field::AbstractArray,op::F,e_field::AbstractArray) where {F<:Function}
     is_proper_size(e_field,kc.uR.n) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
     is_proper_size(c_field,length(kc.uR.indices)) || throw(DimensionMismatch("Output array doesn't seem to be a cell field"))
 
-    energy = @inline function (y,x); op(y,0.5*(x⋅x));end
-    kc.uR(c_field,energy,e_field)
+    f = OpKineticEnergy(op)
+    kc.uR(c_field, f,e_field)
  
     return c_field
 end

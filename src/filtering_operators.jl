@@ -2,9 +2,9 @@ abstract type FilteringOperator <: LinearVoronoiOperator end
 
 using OrderedCollections
 
-struct CellBoxFilter{N_MAX,TI,TF,TW<:Union{TF,Vector{TF}}} <: FilteringOperator
-    weights::Vector{ImmutableVector{N_MAX,TF}}
-    indices::Vector{ImmutableVector{N_MAX,TI}}
+struct CellBoxFilter{N_MAX, TI, TF, TW <: Union{TF, Vector{TF}}} <: FilteringOperator
+    weights::Vector{ImmutableVector{N_MAX, TF}}
+    indices::Vector{ImmutableVector{N_MAX, TI}}
     width::TW
 end
 name_input(::CellBoxFilter) = "cell"
@@ -16,16 +16,16 @@ function in_circle(c, r2, p)
     return (cp ⋅ cp) <= r2
 end
 
-function weight_indices_matrix_to_immutable(::Val{N_MAX}, nElements::AbstractVector, inds::Matrix{TI}, wm::Matrix{TF}) where {N_MAX,TI,TF}
+function weight_indices_matrix_to_immutable(::Val{N_MAX}, nElements::AbstractVector, inds::Matrix{TI}, wm::Matrix{TF}) where {N_MAX, TI, TF}
     nCells = length(nElements)
-    w = Vector{ImmutableVector{N_MAX,TF}}(undef, nCells)
-    indices = Vector{ImmutableVector{N_MAX,TI}}(undef, nCells)
+    w = Vector{ImmutableVector{N_MAX, TF}}(undef, nCells)
+    indices = Vector{ImmutableVector{N_MAX, TI}}(undef, nCells)
 
     @parallel for i in Base.OneTo(nCells)
         @inbounds begin
-        r = Base.OneTo(nElements[i])
-        w[i] = ImmutableVector{N_MAX}(@view wm[r, i])
-        indices[i] = ImmutableVector{N_MAX}(@view inds[r, i])
+            r = Base.OneTo(nElements[i])
+            w[i] = ImmutableVector{N_MAX}(@view wm[r, i])
+            indices[i] = ImmutableVector{N_MAX}(@view inds[r, i])
         end
     end
 
@@ -40,9 +40,9 @@ function compute_cell_box_filter_weights_and_indices_periodic(Δ::Number, c_posi
     r = Δ / 2
     r2 = r * r
 
-    checked_cells_task = TaskLocalValue{OrderedSet{Int}}(()->OrderedSet{Int}()) # To store cells that were already checked
-    cells_to_check_task = TaskLocalValue{OrderedSet{Int}}(()->OrderedSet{Int}()) # Set of cells we want to check
-    neighbour_cells_task = TaskLocalValue{OrderedSet{Int}}(()->OrderedSet{Int}()) # Set of cells surrounding a given cell
+    checked_cells_task = TaskLocalValue{OrderedSet{Int}}(() -> OrderedSet{Int}()) # To store cells that were already checked
+    cells_to_check_task = TaskLocalValue{OrderedSet{Int}}(() -> OrderedSet{Int}()) # Set of cells we want to check
+    neighbour_cells_task = TaskLocalValue{OrderedSet{Int}}(() -> OrderedSet{Int}()) # Set of cells surrounding a given cell
 
     @parallel for c in Base.OneTo(nCells)
         checked_cells = checked_cells_task[]
@@ -128,7 +128,7 @@ function CellBoxFilter(mesh::VoronoiMesh{false}, Δ::Number)
     return CellBoxFilter(w, indices, Δ)
 end
 
-function compute_cell_box_filter_weights_and_indices_periodic_variable_resolution(width_func::F, c_position, areaCell, cellsOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, verticesOnCell, v_position, xp::Number, yp::Number) where {F<:Function,N_MAX}
+function compute_cell_box_filter_weights_and_indices_periodic_variable_resolution(width_func::F, c_position, areaCell, cellsOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, verticesOnCell, v_position, xp::Number, yp::Number) where {F <: Function, N_MAX}
     nCells = length(areaCell)
     w = zeros(eltype(areaCell), 255, nCells) # I'm assuming the filtering stencil won't be larger than 255, which is the maximum number of elements supported by ImmutableVectors
     width = zeros(eltype(areaCell), nCells)
@@ -223,7 +223,7 @@ function CellBoxFilter(mesh::VoronoiMesh{false}, f::Function)
     return CellBoxFilter(w, indices, Δ)
 end
 
-function CellBoxFilter(mesh::VoronoiMesh{false}, variable_resolution::Bool=false, ratio=2.0)
+function CellBoxFilter(mesh::VoronoiMesh{false}, variable_resolution::Bool = false, ratio = 2.0)
     if !variable_resolution
         Δ = 2 * mesh.attributes[:dc]::Float64
         return CellBoxFilter(mesh, Δ)

@@ -22,9 +22,9 @@ const v = 3.0𝐢 + 4.0𝐣
     vert_const_field2D = ones(8, nvertex)
     vert_const_field3D = ones(8, nvertex, 2)
 
-    vert_const_vec_field1D = VecArray(x=ones(nvertex), y=ones(nvertex))
-    vert_const_vec_field2D = VecArray(x=ones(8, nvertex), y=ones(8, nvertex))
-    vert_const_vec_field3D = VecArray(x=ones(8, nvertex, 2), y=ones(8, nvertex, 2))
+    vert_const_vec_field1D = VecArray(x = ones(nvertex), y = ones(nvertex))
+    vert_const_vec_field2D = VecArray(x = ones(8, nvertex), y = ones(8, nvertex))
+    vert_const_vec_field3D = VecArray(x = ones(8, nvertex, 2), y = ones(8, nvertex, 2))
 
     for mesh in (mesh_iso, mesh_distorted)
         for v2e in (VertexToEdgeMean(mesh), VertexToEdgeInterpolation(mesh), VertexToEdgePiecewise(mesh), VertexToEdgeArea(mesh))
@@ -48,9 +48,9 @@ end
     cell_const_field2D = ones(8, ncells)
     cell_const_field3D = ones(8, ncells, 2)
 
-    cell_const_vec_field1D = VecArray(x=ones(ncells), y=ones(ncells))
-    cell_const_vec_field2D = VecArray(x=ones(8, ncells), y=ones(8, ncells))
-    cell_const_vec_field3D = VecArray(x=ones(8, ncells, 2), y=ones(8, ncells, 2))
+    cell_const_vec_field1D = VecArray(x = ones(ncells), y = ones(ncells))
+    cell_const_vec_field2D = VecArray(x = ones(8, ncells), y = ones(8, ncells))
+    cell_const_vec_field3D = VecArray(x = ones(8, ncells, 2), y = ones(8, ncells, 2))
 
     for mesh in (mesh_iso, mesh_distorted)
         for c2e in (CellToEdgeMean(mesh), CellToEdgeBaricentric(mesh))
@@ -102,9 +102,9 @@ end
                     fieldk = kR(ueND)
                     @test all(isapprox(25.0), kR(fieldk, +, ueND))
                 else
-                    @test all(x -> isapprox(x, 12.5; atol=3.0), kR(ueND))
+                    @test all(x -> isapprox(x, 12.5; atol = 3.0), kR(ueND))
                     fieldk = kR(ueND)
-                    @test all(x -> isapprox(x, 25.0; atol=6.0), kR(fieldk, +, ueND))
+                    @test all(x -> isapprox(x, 25.0; atol = 6.0), kR(fieldk, +, ueND))
                 end
             end
         end
@@ -141,8 +141,8 @@ end
         end
         Div = DivAtCell(mesh)
         for ueND in (ue1D, ue2D, ue3D)
-            atol = 1e-8 * norm(v) # isapprox(0.0) is tricky to evaluate
-            @test all(x -> isapprox(x, 0.0; atol=atol), Div(ueND))
+            atol = 1.0e-8 * norm(v) # isapprox(0.0) is tricky to evaluate
+            @test all(x -> isapprox(x, 0.0; atol = atol), Div(ueND))
             field = Div(ueND)
             field .= 1
             @test all(x -> isapprox(x, 1.0), Div(field, +, ueND))
@@ -155,9 +155,9 @@ end
     cell_const_field2D = ones(8, ncells)
     cell_const_field3D = ones(8, ncells, 2)
 
-    cell_const_vec_field1D = VecArray(x=ones(ncells), y=ones(ncells))
-    cell_const_vec_field2D = VecArray(x=ones(8, ncells), y=ones(8, ncells))
-    cell_const_vec_field3D = VecArray(x=ones(8, ncells, 2), y=ones(8, ncells, 2))
+    cell_const_vec_field1D = VecArray(x = ones(ncells), y = ones(ncells))
+    cell_const_vec_field2D = VecArray(x = ones(8, ncells), y = ones(8, ncells))
+    cell_const_vec_field3D = VecArray(x = ones(8, ncells, 2), y = ones(8, ncells, 2))
 
     for mesh in (mesh_iso, mesh_distorted)
         Filter = CellBoxFilter(mesh)
@@ -209,8 +209,8 @@ end
             ut3D[:, :, t] .= ut2D
         end
         tvr = TangentialVelocityReconstructionThuburn(mesh)
-        for (utND,ueND) in ((ut1D,ue1D), (ut2D,ue2D), (ut3D,ue3D))
-            @test all(map((x,y) -> isapprox(x, y; atol=2.0), utND, tvr(ueND)))
+        for (utND, ueND) in ((ut1D, ue1D), (ut2D, ue2D), (ut3D, ue3D))
+            @test all(map((x, y) -> isapprox(x, y; atol = 2.0), utND, tvr(ueND)))
         end
     end
 end

@@ -6,6 +6,9 @@ struct GradientAtEdge{TI, TF} <: DifferentialOperator
     indices::Vector{NTuple{2, TI}}
 end
 
+name_input(::GradientAtEdge) = "cell"
+name_output(::GradientAtEdge) = "edge"
+
 GradientAtEdge(mesh::VoronoiMesh) = GradientAtEdge(mesh.cells.n, mesh.edges.dc, mesh.edges.cellsOnEdge)
 
 function gradient_at_edge!(out::AbstractVector, c_field, dc, cellsOnEdge, op::F = Base.identity) where {F <: Function}
@@ -213,7 +216,7 @@ function gradient_at_edge!(out::AbstractArray{T, 3}, op_out::typeof(+), c_field,
 end
 
 function (Vop::GradientAtEdge)(out_field::AbstractArray, in_field::AbstractArray, op::F = Base.identity) where {F <: Function}
-    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input) field"))
+    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
     is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
 
     gradient_at_edge!(out_field, in_field, Vop.dc, Vop.indices, op)
@@ -242,6 +245,9 @@ struct DivAtCell{N_MAX, TI, TF} <: DifferentialOperator
     indices::Vector{ImmutableVector{N_MAX, TI}}
     weights::Vector{ImmutableVector{N_MAX, TF}}
 end
+
+name_input(::DivAtCell) = "edge"
+name_output(::DivAtCell) = "cell"
 
 function compute_div_at_cell_weights(areaCell, edgesOnCell::Vector{<:ImmutableVector{N_MAX}}, dvEdge::AbstractVector{T}, cellsOnEdge) where {N_MAX, T}
     w = Vector{ImmutableVector{N_MAX, T}}(undef, length(areaCell))

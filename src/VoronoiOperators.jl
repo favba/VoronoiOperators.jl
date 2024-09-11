@@ -26,7 +26,7 @@ abstract type NonLinearVoronoiOperator <: VoronoiOperator end
 abstract type LinearVoronoiOperator <: VoronoiOperator end
 
 function (Vop::LinearVoronoiOperator)(out_field::AbstractArray, in_field::AbstractArray, op::F = Base.identity) where {F <: Function}
-    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input) field"))
+    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
     is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
 
     weighted_sum_transformation!(out_field, in_field, Vop.weights, Vop.indices, op)

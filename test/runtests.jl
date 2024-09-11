@@ -19,12 +19,12 @@ const v = 3.0𝐢 + 4.0𝐣
 @testset "Vertex to Edge Transformations" begin
 
     vert_const_field1D = ones(nvertex)
-    vert_const_field2D = ones(8, nvertex)
-    vert_const_field3D = ones(8, nvertex, 2)
+    vert_const_field2D = ones(10, nvertex)
+    vert_const_field3D = ones(10, nvertex, 2)
 
     vert_const_vec_field1D = VecArray(x = ones(nvertex), y = ones(nvertex))
-    vert_const_vec_field2D = VecArray(x = ones(8, nvertex), y = ones(8, nvertex))
-    vert_const_vec_field3D = VecArray(x = ones(8, nvertex, 2), y = ones(8, nvertex, 2))
+    vert_const_vec_field2D = VecArray(x = ones(10, nvertex), y = ones(10, nvertex))
+    vert_const_vec_field3D = VecArray(x = ones(10, nvertex, 2), y = ones(10, nvertex, 2))
 
     for mesh in (mesh_iso, mesh_distorted)
         for v2e in (VertexToEdgeMean(mesh), VertexToEdgeInterpolation(mesh), VertexToEdgePiecewise(mesh), VertexToEdgeArea(mesh))
@@ -45,12 +45,12 @@ end
 
 @testset "Cell to Edge Transformations" begin
     cell_const_field1D = ones(ncells)
-    cell_const_field2D = ones(8, ncells)
-    cell_const_field3D = ones(8, ncells, 2)
+    cell_const_field2D = ones(10, ncells)
+    cell_const_field3D = ones(10, ncells, 2)
 
     cell_const_vec_field1D = VecArray(x = ones(ncells), y = ones(ncells))
-    cell_const_vec_field2D = VecArray(x = ones(8, ncells), y = ones(8, ncells))
-    cell_const_vec_field3D = VecArray(x = ones(8, ncells, 2), y = ones(8, ncells, 2))
+    cell_const_vec_field2D = VecArray(x = ones(10, ncells), y = ones(10, ncells))
+    cell_const_vec_field3D = VecArray(x = ones(10, ncells, 2), y = ones(10, ncells, 2))
 
     for mesh in (mesh_iso, mesh_distorted)
         for c2e in (CellToEdgeMean(mesh), CellToEdgeBaricentric(mesh))
@@ -74,9 +74,9 @@ end
     for mesh in (mesh_iso, mesh_distorted)
         isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
         ue1D = dot.(mesh.edges.normalVectors, (v,))
-        ue2D = similar(ue1D, (8, nedges))
-        ue3D = similar(ue1D, (8, nedges, 2))
-        for k in 1:8
+        ue2D = similar(ue1D, (10, nedges))
+        ue3D = similar(ue1D, (10, nedges, 2))
+        for k in 1:10
             ue2D[k, :] .= ue1D
         end
         for t in 1:2
@@ -124,6 +124,38 @@ end
         e_field = ∇e(c_field)
         @test all(x -> isapprox(2 * x[1], x[2]), zip(grad_c_masked, ∇e(e_field, +, c_field)[mask]))
         @test all(x -> isapprox(x[1], x[2]), zip(grad_c_masked, ∇e(e_field, -, c_field)[mask]))
+
+        c_field2D = similar(c_field, (10, ncells))
+        grad_c_field2D = similar(grad_c_field, (10, nedges))
+
+        for k in 1:10
+            c_field2D[k, :] .= c_field
+            grad_c_field2D[k, :] .= grad_c_field
+        end
+
+        grad_c_masked2D = grad_c_field2D[:, mask]
+
+        @test all(x -> isapprox(x[1], x[2]), zip(grad_c_masked2D, ∇e(c_field2D)[:, mask]))
+
+        e_field2D = ∇e(c_field2D)
+        @test all(x -> isapprox(2 * x[1], x[2]), zip(grad_c_masked2D, ∇e(e_field2D, +, c_field2D)[:, mask]))
+        @test all(x -> isapprox(x[1], x[2]), zip(grad_c_masked2D, ∇e(e_field2D, -, c_field2D)[:, mask]))
+
+        c_field3D = similar(c_field, (10, ncells, 2))
+        grad_c_field3D = similar(grad_c_field, (10, nedges, 2))
+
+        for t in 1:2
+            c_field3D[:, :, t] .= c_field2D
+            grad_c_field3D[:, :, t] .= grad_c_field2D
+        end
+
+        grad_c_masked3D = grad_c_field2D[:, mask, :]
+
+        @test all(x -> isapprox(x[1], x[2]), zip(grad_c_masked3D, ∇e(c_field3D)[:, mask, :]))
+
+        e_field3D = ∇e(c_field3D)
+        @test all(x -> isapprox(2 * x[1], x[2]), zip(grad_c_masked3D, ∇e(e_field3D, +, c_field3D)[:, mask, :]))
+        @test all(x -> isapprox(x[1], x[2]), zip(grad_c_masked3D, ∇e(e_field3D, -, c_field3D)[:, mask, :]))
     end
 end
 
@@ -131,9 +163,9 @@ end
     for mesh in (mesh_iso, mesh_distorted)
         isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
         ue1D = dot.(mesh.edges.normalVectors, (v,))
-        ue2D = similar(ue1D, (8, nedges))
-        ue3D = similar(ue1D, (8, nedges, 2))
-        for k in 1:8
+        ue2D = similar(ue1D, (10, nedges))
+        ue3D = similar(ue1D, (10, nedges, 2))
+        for k in 1:10
             ue2D[k, :] .= ue1D
         end
         for t in 1:2
@@ -152,12 +184,12 @@ end
 
 @testset "Cell value Filtering" begin
     cell_const_field1D = ones(ncells)
-    cell_const_field2D = ones(8, ncells)
-    cell_const_field3D = ones(8, ncells, 2)
+    cell_const_field2D = ones(10, ncells)
+    cell_const_field3D = ones(10, ncells, 2)
 
     cell_const_vec_field1D = VecArray(x = ones(ncells), y = ones(ncells))
-    cell_const_vec_field2D = VecArray(x = ones(8, ncells), y = ones(8, ncells))
-    cell_const_vec_field3D = VecArray(x = ones(8, ncells, 2), y = ones(8, ncells, 2))
+    cell_const_vec_field2D = VecArray(x = ones(10, ncells), y = ones(10, ncells))
+    cell_const_vec_field3D = VecArray(x = ones(10, ncells, 2), y = ones(10, ncells, 2))
 
     for mesh in (mesh_iso, mesh_distorted)
         Filter = CellBoxFilter(mesh)
@@ -196,11 +228,11 @@ end
         ue1D = dot.(mesh.edges.normalVectors, (v,))
         isdefined(mesh.edges, :tangentialVectors) || compute_edge_tangents!(mesh)
         ut1D = dot.(mesh.edges.tangentialVectors, (v,))
-        ue2D = similar(ue1D, (8, nedges))
-        ut2D = similar(ut1D, (8, nedges))
-        ue3D = similar(ue1D, (8, nedges, 2))
-        ut3D = similar(ut1D, (8, nedges, 2))
-        for k in 1:8
+        ue2D = similar(ue1D, (10, nedges))
+        ut2D = similar(ut1D, (10, nedges))
+        ue3D = similar(ue1D, (10, nedges, 2))
+        ut3D = similar(ut1D, (10, nedges, 2))
+        for k in 1:10
             ue2D[k, :] .= ue1D
             ut2D[k, :] .= ut1D
         end

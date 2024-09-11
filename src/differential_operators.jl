@@ -1,80 +1,146 @@
 abstract type DifferentialOperator <: LinearVoronoiOperator end
 
 struct GradientAtEdge{TI, TF} <: DifferentialOperator
-    nCells::Int
+    n::Int
     dc::Vector{TF}
-    cellsOnEdge::Vector{NTuple{2, TI}}
+    indices::Vector{NTuple{2, TI}}
 end
 
 GradientAtEdge(mesh::VoronoiMesh) = GradientAtEdge(mesh.cells.n, mesh.edges.dc, mesh.edges.cellsOnEdge)
 
-function gradient_at_edge!(out::AbstractVector, c_field, dc, cellsOnEdge)
+function gradient_at_edge!(out::AbstractVector, c_field, dc, cellsOnEdge, op::F = Base.identity) where {F <: Function}
     @parallel for e in eachindex(cellsOnEdge)
-        @inbounds begin
+        @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
-            out[e] = (c_field[c2] - c_field[c1]) / dc[e]
+            out[e] = (op(c_field[c2]) - op(c_field[c1])) / dc[e]
         end
     end
     return out
 end
 
-function gradient_at_edge!(out::AbstractVector, op::F, c_field, dc, cellsOnEdge) where {F <: Function}
+function gradient_at_edge!(out::AbstractVector, op_out::F, c_field, dc, cellsOnEdge, op::F2 = Base.identity) where {F <: Function, F2 <: Function}
     @parallel for e in eachindex(cellsOnEdge)
-        @inbounds begin
+        @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
-            out[e] = op(out[e], (c_field[c2] - c_field[c1]) / dc[e])
+            out[e] = op_out(out[e], (op(c_field[c2]) - op(c_field[c1])) / dc[e])
         end
     end
     return out
 end
 
-function gradient_at_edge!(out::AbstractMatrix, c_field, dc, cellsOnEdge)
+function gradient_at_edge!(out::AbstractMatrix{T}, c_field, dc, cellsOnEdge, op::F = Base.identity) where {T, F <: Function}
+
+    N_SIMD = simd_length(T)
+    ValN_SIMD = Val{N_SIMD}()
+    lane = sd.VecRange{N_SIMD}(0)
+    Nk = size(out, 1)
+
+    range_simd, range_serial = simd_ranges(N_SIMD, Nk)
+
     @parallel for e in eachindex(cellsOnEdge)
-        @inbounds begin
+        @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             inv_dc = inv(dc[e])
-            @simd ivdep for k in axes(out, 1)
-                out[k, e] = inv_dc * (c_field[k, c2] - c_field[k, c1])
+            inv_dc_simd = simd_repeat(ValN_SIMD, inv_dc)
+
+            for k in range_simd
+                k_simd = lane + k
+                out[k_simd, e] = inv_dc_simd * (op(c_field[k_simd, c2]) - op(c_field[k_simd, c1]))
             end
+
+            for k in range_serial
+                out[k, e] = inv_dc * (op(c_field[k, c2]) - op(c_field[k, c1]))
+            end
+
         end #inbounds
     end
     return out
 end
 
-function gradient_at_edge!(out::AbstractMatrix, op::F, c_field, dc, cellsOnEdge) where {F <: Function}
+function gradient_at_edge!(out::AbstractMatrix{T}, op_out::F, c_field, dc, cellsOnEdge, op::F2 = Base.identity) where {T, F <: Function, F2 <: Function}
+
+    N_SIMD = simd_length(T)
+    ValN_SIMD = Val{N_SIMD}()
+    lane = sd.VecRange{N_SIMD}(0)
+    Nk = size(out, 1)
+
+    range_simd, range_serial = simd_ranges(N_SIMD, Nk)
+
     @parallel for e in eachindex(cellsOnEdge)
-        @inbounds begin
+        @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             inv_dc = inv(dc[e])
-            @simd ivdep for k in axes(out, 1)
-                out[k, e] = op(out[k, e], inv_dc * (c_field[k, c2] - c_field[k, c1]))
+            inv_dc_simd = simd_repeat(ValN_SIMD, inv_dc)
+
+            for k in range_simd
+                k_simd = lane + k
+                out[k_simd, e] = op_out(out[k_simd, e], inv_dc_simd * (op(c_field[k_simd, c2]) - op(c_field[k_simd, c1])))
             end
+
+            for k in range_serial
+                out[k, e] = op_out(out[k, e], inv_dc * (op(c_field[k, c2]) - op(c_field[k, c1])))
+            end
+
         end #inbounds
     end
+
     return out
 end
 
-function gradient_at_edge!(out::AbstractMatrix, op::typeof(+), c_field, dc, cellsOnEdge)
+function gradient_at_edge!(out::AbstractMatrix{T}, op_out::typeof(+), c_field, dc, cellsOnEdge, op::F = Base.identity) where {T, F <: Function}
+
+    N_SIMD = simd_length(T)
+    ValN_SIMD = Val{N_SIMD}()
+    lane = sd.VecRange{N_SIMD}(0)
+    Nk = size(out, 1)
+
+    range_simd, range_serial = simd_ranges(N_SIMD, Nk)
+
     @parallel for e in eachindex(cellsOnEdge)
-        @inbounds begin
+        @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             inv_dc = inv(dc[e])
-            @simd ivdep for k in axes(out, 1)
-                out[k, e] = muladd(inv_dc, (c_field[k, c2] - c_field[k, c1]), out[k, e])
+            inv_dc_simd = simd_repeat(ValN_SIMD, inv_dc)
+
+            for k in range_simd
+                k_simd = lane + k
+                out[k_simd, e] = muladd(inv_dc_simd, (op(c_field[k_simd, c2]) - op(c_field[k_simd, c1])), out[k_simd, e])
             end
+
+            for k in range_serial
+                out[k, e] = muladd(inv_dc, (op(c_field[k, c2]) - op(c_field[k, c1])), out[k, e])
+            end
+
         end #inbounds
     end
+
     return out
 end
 
-function gradient_at_edge!(out::AbstractArray{<:Any, 3}, c_field, dc, cellsOnEdge)
+function gradient_at_edge!(out::AbstractArray{T, 3}, c_field, dc, cellsOnEdge, op::F = Base.identity) where {T, F <: Function}
+
+    N_SIMD = simd_length(T)
+    ValN_SIMD = Val{N_SIMD}()
+    lane = sd.VecRange{N_SIMD}(0)
+    Nk = size(out, 1)
+
+    range_simd, range_serial = simd_ranges(N_SIMD, Nk)
+
     @parallel for e in eachindex(cellsOnEdge)
-        @inbounds begin
+        @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             inv_dc = inv(dc[e])
+            inv_dc_simd = simd_repeat(ValN_SIMD, inv_dc)
+
             for t in axes(out, 3)
-                @simd ivdep for k in axes(out, 1)
-                    out[k, e, t] = inv_dc * (c_field[k, c2, t] - c_field[k, c1, t])
+
+                for k in range_simd
+                    k_simd = lane + k
+                    out[k_simd, e, t] = inv_dc_simd * (op(c_field[k_simd, c2, t]) - op(c_field[k_simd, c1, t]))
+                end
+
+                for k in range_serial
+                    out[k, e, t] = inv_dc * (op(c_field[k, c2, t]) - op(c_field[k, c1, t]))
                 end
             end
         end #inbounds
@@ -82,55 +148,93 @@ function gradient_at_edge!(out::AbstractArray{<:Any, 3}, c_field, dc, cellsOnEdg
     return out
 end
 
-function gradient_at_edge!(out::AbstractArray{<:Any, 3}, op::F, c_field, dc, cellsOnEdge) where {F <: Function}
+function gradient_at_edge!(out::AbstractArray{T, 3}, op_out::F, c_field, dc, cellsOnEdge, op::F2 = Base.identity) where {T, F <: Function, F2 <: Function}
+
+    N_SIMD = simd_length(T)
+    ValN_SIMD = Val{N_SIMD}()
+    lane = sd.VecRange{N_SIMD}(0)
+    Nk = size(out, 1)
+
+    range_simd, range_serial = simd_ranges(N_SIMD, Nk)
+
     @parallel for e in eachindex(cellsOnEdge)
-        @inbounds begin
+        @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             inv_dc = inv(dc[e])
+            inv_dc_simd = simd_repeat(ValN_SIMD, inv_dc)
+
             for t in axes(out, 3)
-                @simd ivdep for k in axes(out, 1)
-                    out[k, e, t] = op(out[k, e, t], inv_dc * (c_field[k, c2, t] - c_field[k, c1, t]))
+
+                for k in range_simd
+                    k_simd = lane + k
+                    out[k_simd, e, t] = op_out(out[k_simd, e, t], inv_dc_simd * (op(c_field[k_simd, c2, t]) - op(c_field[k_simd, c1, t])))
+                end
+
+                for k in range_serial
+                    out[k, e, t] = op_out(out[k, e, t], inv_dc * (op(c_field[k, c2, t]) - op(c_field[k, c1, t])))
                 end
             end
         end #inbounds
     end
+
     return out
 end
 
-function gradient_at_edge!(out::AbstractArray{<:Any, 3}, op::typeof(+), c_field, dc, cellsOnEdge)
+function gradient_at_edge!(out::AbstractArray{T, 3}, op_out::typeof(+), c_field, dc, cellsOnEdge, op::F = Base.identity) where {T, F <: Function}
+
+    N_SIMD = simd_length(T)
+    ValN_SIMD = Val{N_SIMD}()
+    lane = sd.VecRange{N_SIMD}(0)
+    Nk = size(out, 1)
+
+    range_simd, range_serial = simd_ranges(N_SIMD, Nk)
+
     @parallel for e in eachindex(cellsOnEdge)
-        @inbounds begin
+        @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             inv_dc = inv(dc[e])
+            inv_dc_simd = simd_repeat(ValN_SIMD, inv_dc)
+
             for t in axes(out, 3)
-                @simd ivdep for k in axes(out, 1)
-                    out[k, e, t] = muladd(inv_dc, (c_field[k, c2, t] - c_field[k, c1, t]), out[k, e, t])
+
+                for k in range_simd
+                    k_simd = lane + k
+                    out[k_simd, e, t] = muladd(inv_dc_simd, (op(c_field[k_simd, c2, t]) - op(c_field[k_simd, c1, t])), out[k_simd, e, t])
+                end
+
+                for k in range_serial
+                    out[k, e, t] = muladd(inv_dc, (op(c_field[k, c2, t]) - op(c_field[k, c1, t])), out[k, e, t])
                 end
             end
         end #inbounds
     end
+
     return out
 end
 
-function (∇e::GradientAtEdge)(e_field::AbstractArray, c_field::AbstractArray)
-    is_proper_size(c_field, ∇e.nCells) || throw(DomainError(c_field, "Input array doesn't seem to be a cell field"))
-    is_proper_size(e_field, length(∇e.cellsOnEdge)) || throw(DomainError(e_field, "Output array doesn't seem to be an edge field"))
+function (Vop::GradientAtEdge)(out_field::AbstractArray, in_field::AbstractArray, op::F = Base.identity) where {F <: Function}
+    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input) field"))
+    is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
 
-    return gradient_at_edge!(e_field, c_field, ∇e.dc, ∇e.cellsOnEdge)
+    gradient_at_edge!(out_field, in_field, Vop.dc, Vop.indices, op)
+
+    return out_field
 end
 
-function (∇e::GradientAtEdge)(e_field::AbstractArray, op::F, c_field::AbstractArray) where {F <: Function}
-    is_proper_size(c_field, ∇e.nCells) || throw(DomainError(c_field, "Input array doesn't seem to be a cell field"))
-    is_proper_size(e_field, length(∇e.cellsOnEdge)) || throw(DomainError(e_field, "Output array doesn't seem to be an edge field"))
+function (Vop::GradientAtEdge)(out_field::AbstractArray, op_out::F, in_field::AbstractArray, op::F2 = Base.identity) where {F <: Function, F2 <: Function}
+    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
+    is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
 
-    return gradient_at_edge!(e_field, op, c_field, ∇e.dc, ∇e.cellsOnEdge)
+    gradient_at_edge!(out_field, op_out, in_field, Vop.dc, Vop.indices, op)
+
+    return out_field
 end
 
-function (∇e::GradientAtEdge)(c_field::AbstractArray)
-    is_proper_size(c_field, ∇e.nCells) || throw(DomainError(c_field, "Input array doesn't seem to be a cell field"))
-    s = construct_new_node_index(size(c_field)..., length(∇e.cellsOnEdge))
-    e_field = similar(c_field, s)
-    return ∇e(e_field, c_field)
+function (Vop::GradientAtEdge)(in_field::AbstractArray, op::F = Base.identity) where {F <: Function}
+    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
+    s = construct_new_node_index(size(in_field)..., n_output(Vop))
+    out_field = my_similar(in_field, Base.promote_op(*, eltype(eltype(Vop.dc)), Base.promote_op(op, eltype(in_field))), s)
+    return Vop(out_field, in_field, op)
 end
 
 struct DivAtCell{N_MAX, TI, TF} <: DifferentialOperator

@@ -246,3 +246,43 @@ end
         end
     end
 end
+
+# v =  𝐤 × 𝐫 (where 𝐫 = x𝐢 + y𝐣)
+v_field_for_curl(𝐱) = 𝐤 × 𝐱
+# ∇ × v = 2𝐤
+@testset "Curl at Vertex" begin
+    for mesh in (mesh_iso, mesh_distorted)
+        isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
+        e_field = dot.(v_field_for_curl.(mesh.edges.position), mesh.edges.normalVectors)
+        mask = periodic_vertices_mask(mesh)
+
+        curl_v = CurlAtVertex(mesh)
+        @test all(isapprox(2.0), curl_v(e_field)[mask])
+
+        v_field = ones(nvertex)
+        @test all(isapprox(3.0), curl_v(v_field, +, e_field)[mask])
+
+        e_field2D = similar(e_field, (10, nedges))
+
+        for k in 1:10
+            e_field2D[k, :] .= e_field
+        end
+
+        @test all(isapprox(2.0), curl_v(e_field2D)[:, mask])
+
+        v_field2D = ones(10, nvertex)
+        @test all(isapprox(3.0), curl_v(v_field2D, +, e_field2D)[:, mask])
+
+        e_field3D = similar(e_field, (10, nedges, 2))
+
+        for t in 1:2
+            e_field3D[:, :, t] .= e_field2D
+        end
+
+        @test all(isapprox(2.0), curl_v(e_field3D)[:, mask, :])
+
+        v_field3D = ones(10, nvertex, 2)
+        @test all(isapprox(3.0), curl_v(v_field3D, +, e_field3D)[:, mask, :])
+    end
+
+end

@@ -273,3 +273,60 @@ function DivAtCell(mesh::VoronoiMesh)
     w = compute_div_at_cell_weights(mesh.areaCell, mesh.edgesOnCell, mesh.dvEdge, mesh.cellsOnEdge)
     return DivAtCell(mesh.edges.n, mesh.edgesOnCell, w)
 end
+
+struct CurlAtVertex{TF, TI} <: DifferentialOperator
+    n::Int
+    weights::Vector{NTuple{3, TF}}
+    indices::Vector{NTuple{3, TI}}
+end
+
+name_input(::CurlAtVertex) = "edge"
+name_output(::CurlAtVertex) = "vertex"
+
+function compute_rotational_at_vertex_weights!(weights, areaVertex, dc, edgesOnVertex, cellsOnVertex, cellsOnEdge)
+
+    @parallel for v in eachindex(weights)
+        e1, e2, e3 = edgesOnVertex[v]
+        c1, c2, c3 = cellsOnVertex[v]
+
+        c1e1, c2e1 = cellsOnEdge[e1]
+        if (c3, c1) == (c1e1, c2e1)
+            sign_e1 = 1
+        elseif (c1, c3) == (c1e1, c2e1)
+            sign_e1 = -1
+        else
+            error("Is the vertex info ordering correct?")
+        end
+
+        c1e2, c2e2 = cellsOnEdge[e2]
+        if (c1, c2) == (c1e2, c2e2)
+            sign_e2 = 1
+        elseif (c2, c1) == (c1e2, c2e2)
+            sign_e2 = -1
+        else
+            error("Is the vertex info ordering correct?")
+        end
+
+        c1e3, c2e3 = cellsOnEdge[e3]
+        if (c2, c3) == (c1e3, c2e3)
+            sign_e3 = 1
+        elseif (c3, c2) == (c1e3, c2e3)
+            sign_e3 = -1
+        else
+            error("Is the vertex info ordering correct?")
+        end
+
+        av = areaVertex[v]
+
+        weights[v] = (sign_e1 * dc[e1], sign_e2 * dc[e2], sign_e3 * dc[e3]) ./ av
+    end
+
+    return weights
+end
+
+function compute_rotational_at_vertex_weights(areaVertex, dc, edgesOnVertex, cellsOnVertex, cellsOnEdge)
+    weights = similar(areaVertex, NTuple{3, Base.promote_op(/, eltype(dc), eltype(areaVertex))})
+    return compute_rotational_at_vertex_weights!(weights, areaVertex, dc, edgesOnVertex, cellsOnVertex, cellsOnEdge)
+end
+
+CurlAtVertex(mesh::VoronoiMesh) = CurlAtVertex(mesh.edges.n, compute_rotational_at_vertex_weights(mesh.vertices.area, mesh.edges.dc, mesh.edgesOnVertex, mesh.cellsOnVertex, mesh.cellsOnEdge), mesh.edgesOnVertex)

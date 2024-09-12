@@ -330,3 +330,58 @@ function compute_rotational_at_vertex_weights(areaVertex, dc, edgesOnVertex, cel
 end
 
 CurlAtVertex(mesh::VoronoiMesh) = CurlAtVertex(mesh.edges.n, compute_rotational_at_vertex_weights(mesh.vertices.area, mesh.edges.dc, mesh.edgesOnVertex, mesh.cellsOnVertex, mesh.cellsOnEdge), mesh.edgesOnVertex)
+
+struct CurlAtEdge{TF, TI} <: DifferentialOperator
+    weights::Vector{NTuple{4, TF}}
+    indices::Vector{NTuple{4, TI}}
+end
+
+n_input(a::CurlAtEdge) = n_output(a)
+
+name_input(::CurlAtEdge) = "edge"
+name_output(::CurlAtEdge) = "edge"
+
+function find_other_edge_that_shares_cell(e::Integer, edges::NTuple{3}, c::Integer, cellsOnEdge)
+    i = findfirst(x -> ((x != e) && (c in cellsOnEdge[x])), edges)
+    isnothing(i) && error("Couldn't find edge in $edges that share cell $c with $e.")
+    return edges[i]
+end
+
+function compute_rotational_at_edge_weights!(weights, indices, areaVertex, dc, edgesOnVertex, cellsOnEdge, verticesOnEdge)
+
+    @parallel for e in eachindex(weights)
+        v1, v2 = verticesOnEdge[e]
+        c1, c2 = cellsOnEdge[e]
+
+        A = areaVertex[v1] + areaVertex[v2]
+
+        ee1 = find_other_edge_that_shares_cell(e, edgesOnVertex[v2], c1, cellsOnEdge)
+        ee1sign = (c1 == cellsOnEdge[ee1][2]) ? 1 : -1
+        w1 = ee1sign*dc[ee1]/A
+
+        ee2 = find_other_edge_that_shares_cell(e, edgesOnVertex[v1], c1, cellsOnEdge)
+        ee2sign = (c1 == cellsOnEdge[ee2][2]) ? -1 : 1
+        w2 = ee2sign*dc[ee2]/A
+
+        ee3 = find_other_edge_that_shares_cell(e, edgesOnVertex[v1], c2, cellsOnEdge)
+        ee3sign = (c2 == cellsOnEdge[ee3][2]) ? 1 : -1
+        w3 = ee3sign*dc[ee3]/A
+
+        ee4 = find_other_edge_that_shares_cell(e, edgesOnVertex[v2], c2, cellsOnEdge)
+        ee4sign = (c2 == cellsOnEdge[ee4][2]) ? -1 : 1
+        w4 = ee4sign*dc[ee4]/A
+
+        weights[e] = (w1, w2, w3, w4)
+        indices[e] = (ee1, ee2, ee3, ee4)
+    end
+
+    return weights, indices
+end
+
+function compute_rotational_at_edge_weights(areaVertex, dc, edgesOnVertex, cellsOnEdge, verticesOnEdge)
+    weights = similar(dc, NTuple{4, Base.promote_op(/, eltype(dc), eltype(areaVertex))})
+    indices = similar(dc, NTuple{4,eltype(eltype(edgesOnVertex))})
+    return compute_rotational_at_edge_weights!(weights, indices, areaVertex, dc, edgesOnVertex, cellsOnEdge, verticesOnEdge)
+end
+
+CurlAtEdge(mesh::VoronoiMesh) = CurlAtEdge(compute_rotational_at_edge_weights(mesh.vertices.area, mesh.edges.dc, mesh.edgesOnVertex, mesh.cellsOnEdge, mesh.verticesOnEdge)...)

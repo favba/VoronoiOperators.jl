@@ -10,7 +10,7 @@ export VecCellToEdgeTransformation
 export VecCellToEdgeMean
 export CellVelocityReconstruction, CellVelocityReconstructionPerot
 export CellKineticEnergyMPAS, CellKineticEnergyRingler, CellKineticEnergyVelRecon, CellKineticEnergyPerot
-export GradientAtEdge, DivAtCell, CurlAtVertex
+export GradientAtEdge, DivAtCell, CurlAtVertex, CurlAtEdge
 export CellBoxFilter
 export TangentialVelocityReconstructionThuburn
 

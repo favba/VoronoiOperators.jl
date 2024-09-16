@@ -357,19 +357,19 @@ function compute_rotational_at_edge_weights!(weights, indices, areaVertex, dc, e
 
         ee1 = find_other_edge_that_shares_cell(e, edgesOnVertex[v2], c1, cellsOnEdge)
         ee1sign = (c1 == cellsOnEdge[ee1][2]) ? 1 : -1
-        w1 = ee1sign*dc[ee1]/A
+        w1 = ee1sign * dc[ee1] / A
 
         ee2 = find_other_edge_that_shares_cell(e, edgesOnVertex[v1], c1, cellsOnEdge)
         ee2sign = (c1 == cellsOnEdge[ee2][2]) ? -1 : 1
-        w2 = ee2sign*dc[ee2]/A
+        w2 = ee2sign * dc[ee2] / A
 
         ee3 = find_other_edge_that_shares_cell(e, edgesOnVertex[v1], c2, cellsOnEdge)
         ee3sign = (c2 == cellsOnEdge[ee3][2]) ? 1 : -1
-        w3 = ee3sign*dc[ee3]/A
+        w3 = ee3sign * dc[ee3] / A
 
         ee4 = find_other_edge_that_shares_cell(e, edgesOnVertex[v2], c2, cellsOnEdge)
         ee4sign = (c2 == cellsOnEdge[ee4][2]) ? -1 : 1
-        w4 = ee4sign*dc[ee4]/A
+        w4 = ee4sign * dc[ee4] / A
 
         weights[e] = (w1, w2, w3, w4)
         indices[e] = (ee1, ee2, ee3, ee4)
@@ -380,7 +380,7 @@ end
 
 function compute_rotational_at_edge_weights(areaVertex, dc, edgesOnVertex, cellsOnEdge, verticesOnEdge)
     weights = similar(dc, NTuple{4, Base.promote_op(/, eltype(dc), eltype(areaVertex))})
-    indices = similar(dc, NTuple{4,eltype(eltype(edgesOnVertex))})
+    indices = similar(dc, NTuple{4, eltype(eltype(edgesOnVertex))})
     return compute_rotational_at_edge_weights!(weights, indices, areaVertex, dc, edgesOnVertex, cellsOnEdge, verticesOnEdge)
 end
 

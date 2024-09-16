@@ -3,41 +3,19 @@ abstract type VertexToEdgeTransformation <: LinearVoronoiOperator end
 name_input(::VertexToEdgeTransformation) = "vertex"
 name_output(::VertexToEdgeTransformation) = "edge"
 
-
 struct VertexToEdgeMean{TI} <: VertexToEdgeTransformation
     n::Int
     indices::Vector{NTuple{2, TI}}
 end
 
+out_eltype(::VertexToEdgeMean, in_file::AbstractArray{T}, op::F = Base.identity) where {T, F <: Function} = Base.promote_op(/, Base.promote_op(op, T), Int)
+
+transformation_function!(out_field::AbstractArray, in_field::AbstractArray, Vop::VertexToEdgeMean, op::F) where {F <: Function} = to_mean_transformation!(out_field, in_field, Vop.indices, op)
+
+transformation_function!(out_field::AbstractArray, opt_out::F, in_field::AbstractArray, Vop::VertexToEdgeMean, op::F2) where {F <: Function, F2 <: Function} = to_mean_transformation!(out_field, opt_out, in_field, Vop.indices, op)
+
 VertexToEdgeMean(vertices::Union{<:VertexBase, <:VertexInfo}, edges::Union{<:EdgeBase, <:EdgeInfo}) = VertexToEdgeMean(vertices.n, edges.indices.vertices)
 VertexToEdgeMean(mesh::VoronoiMesh) = VertexToEdgeMean(mesh.vertices.base, mesh.edges.base)
-
-@inbounds @inline (v2e::VertexToEdgeMean)(v_field::AbstractArray{<:Any, N}, inds::Vararg{T, N}) where {N, T <: Integer} = to_mean_transformation(v_field, inds, v2e.indices)
-
-function (v2e::VertexToEdgeMean)(e_field::AbstractArray, v_field::AbstractArray)
-    is_proper_size(v_field, v2e.n) || throw(DomainError(v_field, "Input array doesn't seem to be a vertex field"))
-    is_proper_size(e_field, length(v2e.indices)) || throw(DomainError(e_field, "Output array doesn't seem to be an edge field"))
-
-    to_mean_transformation!(e_field, v_field, v2e.indices)
-
-    return e_field
-end
-
-function (v2e::VertexToEdgeMean)(v_field::AbstractArray)
-    is_proper_size(v_field, v2e.n) || throw(DomainError(v_field, "Input array doesn't seem to be a vertex field"))
-    s = construct_new_node_index(size(v_field)..., length(v2e.indices))
-    e_field = similar(v_field, s)
-    return v2e(e_field, v_field)
-end
-
-function (v2e::VertexToEdgeMean)(e_field::AbstractArray, op::F, v_field::AbstractArray) where {F <: Function}
-    is_proper_size(v_field, v2e.n) || throw(DomainError(v_field, "Input array doesn't seem to be a vertex field"))
-    is_proper_size(e_field, length(v2e.indices)) || throw(DomainError(e_field, "Output array doesn't seem to be an edge field"))
-
-    to_mean_transformation!(e_field, op, v_field, v2e.indices)
-
-    return e_field
-end
 
 struct VertexToEdgeWeighted{TI, TF} <: VertexToEdgeTransformation
     n::Int
@@ -161,35 +139,14 @@ struct CellToEdgeMean{TI} <: CellToEdgeTransformation
     indices::Vector{NTuple{2, TI}}
 end
 
+out_eltype(::CellToEdgeMean, in_file::AbstractArray{T}, op::F = Base.identity) where {T, F <: Function} = Base.promote_op(/, Base.promote_op(op, T), Int)
+
+transformation_function!(out_field::AbstractArray, in_field::AbstractArray, Vop::CellToEdgeMean, op::F = Base.identity) where {F <: Function} = to_mean_transformation!(out_field, in_field, Vop.indices, op)
+
+transformation_function!(out_field::AbstractArray, opt_out::F, in_field::AbstractArray, Vop::CellToEdgeMean, op::F2 = Base.identity) where {F <: Function, F2 <: Function} = to_mean_transformation!(out_field, opt_out, in_field, Vop.indices, op)
+
 CellToEdgeMean(cells::Union{<:CellBase, <:CellInfo}, edges::Union{<:EdgeBase, <:EdgeInfo}) = CellToEdgeMean(cells.n, edges.indices.cells)
 CellToEdgeMean(mesh::VoronoiMesh) = CellToEdgeMean(mesh.cells.base, mesh.edges.base)
-
-@inbounds @inline (c2e::CellToEdgeMean)(c_field::AbstractArray{<:Any, N}, inds::Vararg{T, N}) where {N, T <: Integer} = to_mean_transformation(c_field, inds, c2e.indices)
-
-function (c2e::CellToEdgeMean)(e_field::AbstractArray, c_field::AbstractArray)
-    is_proper_size(c_field, c2e.n) || throw(DomainError(c_field, "Input array doesn't seem to be a cell field"))
-    is_proper_size(e_field, length(c2e.indices)) || throw(DomainError(e_field, "Output array doesn't seem to be an edge field"))
-
-    to_mean_transformation!(e_field, c_field, c2e.indices)
-
-    return e_field
-end
-
-function (c2e::CellToEdgeMean)(c_field::AbstractArray)
-    is_proper_size(c_field, c2e.n) || throw(DomainError(c_field, "Input array doesn't seem to be a cell field"))
-    s = construct_new_node_index(size(c_field)..., length(c2e.indices))
-    e_field = similar(c_field, s)
-    return c2e(e_field, c_field)
-end
-
-function (c2e::CellToEdgeMean)(e_field::AbstractArray, op::F, c_field::AbstractArray) where {F <: Function}
-    is_proper_size(c_field, c2e.n) || throw(DomainError(c_field, "Input array doesn't seem to be a cell field"))
-    is_proper_size(e_field, length(c2e.indices)) || throw(DomainError(e_field, "Output array doesn't seem to be an edge field"))
-
-    to_mean_transformation!(e_field, op, c_field, c2e.indices)
-
-    return e_field
-end
 
 struct CellToEdgeBaricentric{TI, TF} <: CellToEdgeTransformation
     n::Int

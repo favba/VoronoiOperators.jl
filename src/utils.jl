@@ -38,15 +38,15 @@ const IntOrVecRange = Union{Int, <:sd.VecRange}
 end
 
 @inline function mean_sum(input_field, ind::NTuple{N, T}, op::F = Base.identity) where {F <: Function, T <: Integer, N}
-    mapreduce(x -> (@inbounds @inline(op(input_field[x]))), +, ind) / N
+    mapreduce(@inline(x -> @inline(op(@inbounds(input_field[x])))), +, ind) / N
 end
 
 @inline function mean_sum(input_field, ind::NTuple{N, T}, k::IntOrVecRange, op::F = Base.identity) where {F <: Function, T <: Integer, N}
-    mapreduce(x -> (@inbounds @inline(op(input_field[k, x]))), +, ind) / N
+    mapreduce(@inline(x -> @inline(op(@inbounds(input_field[k, x])))), +, ind) / N
 end
 
 @inline function mean_sum(input_field, ind::NTuple{N, T}, k::IntOrVecRange, t::Integer, op::F = Base.identity) where {F <: Function, T <: Integer, N}
-    mapreduce(x -> (@inbounds @inline(op(input_field[k, x, t]))), +, ind) / N
+    mapreduce(@inline(x -> @inline(op(@inbounds(input_field[k, x, t])))), +, ind) / N
 end
 
 function to_mean_transformation!(output_field::AbstractVector, input_field::AbstractVector, indices, op::F = Base.identity) where {F <: Function}

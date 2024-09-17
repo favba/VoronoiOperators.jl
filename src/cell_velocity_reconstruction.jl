@@ -9,15 +9,16 @@ struct CellVelocityReconstructionPerot{N_MAX, TF, TI} <: CellVelocityReconstruct
 end
 
 function compute_weights_perot_velocity_reconstruction_periodic!(w::Vector{ImmutableVector{N_MAX, T}}, c_pos, aC, Le, ne, edgesOnCell::Vector{<:ImmutableVector{N_MAX}}, v_pos, verticesOnEdge, xp::Number, yp::Number) where {T, N_MAX}
-    aux = Vector{T}(undef, N_MAX)
 
-    @inbounds for c in eachindex(edgesOnCell)
+    @parallel for c in eachindex(edgesOnCell)
+        @inbounds begin
         cp = c_pos[c]
         inv_a = inv(aC[c])
-        fill!(aux, zero(T))
 
         eoc = edgesOnCell[c]
         l = length(eoc)
+        aux = ImmutableVector{N_MAX,T}()
+
         for i in Base.OneTo(l)
             e = eoc[i]
             v1, v2 = verticesOnEdge[e]
@@ -26,9 +27,10 @@ function compute_weights_perot_velocity_reconstruction_periodic!(w::Vector{Immut
             ep = (v1p + v2p) / 2
             r_vec = cp - ep
             r_vec = copysign(1, (ne[e] ⋅ r_vec)) * r_vec
-            aux[i] = inv_a * r_vec * Le[e]
+            aux = @inbounds push(aux, inv_a * r_vec * Le[e])
         end
-        w[c] = ImmutableVector{N_MAX}(ntuple(j -> getindex(aux, j), Val{N_MAX}()), l)
+        w[c] = aux
+        end #inbounds
     end
     return w
 end

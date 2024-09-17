@@ -175,32 +175,36 @@ function to_mean_transformation!(output_field::AbstractArray{T, 3}, op_out::F, i
     return output_field
 end
 
-@inline function dropfirst(t::NTuple{N}) where {N}
-    return ntuple(i -> t[i + 1], Val{N - 1}())
+#@inline function dropfirst(t::NTuple{N}) where {N}
+#    return ntuple(i -> t[i + 1], Val{N - 1}())
+#end
+
+@inline function droplast(t::NTuple{N}) where {N}
+    return ntuple(@inline(i -> @inbounds(t[i])), Val{N - 1}())
 end
 
 @inbounds @inline function weighted_sum(input_field::AbstractVector, weights::NTuple{2}, indices::NTuple{2}, op::F = Base.identity) where {F <: Function}
-    muladd(weights[1], @inline(op(input_field[indices[1]])), weights[2] * @inline(op(input_field[indices[2]])))
+    muladd(weights[2], @inline(op(input_field[indices[2]])), weights[1] * @inline(op(input_field[indices[1]])))
 end
 
 @inbounds @inline function weighted_sum(input_field::AbstractMatrix, weights::NTuple{2}, indices::NTuple{2}, k::IntOrVecRange, op::F = Base.identity) where {F <: Function}
-    muladd(weights[1], @inline(op(input_field[k, indices[1]])), weights[2] * @inline(op(input_field[k, indices[2]])))
+    muladd(weights[2], @inline(op(input_field[k, indices[2]])), weights[1] * @inline(op(input_field[k, indices[1]])))
 end
 
 @inbounds @inline function weighted_sum(input_field::AbstractArray{<:Any, 3}, weights::NTuple{2}, indices::NTuple{2}, k::IntOrVecRange, t::Int, op::F = Base.identity) where {F <: Function}
-    muladd(weights[1], @inline(op(input_field[k, indices[1], t])), weights[2] * @inline(op(input_field[k, indices[2], t])))
+    muladd(weights[2], @inline(op(input_field[k, indices[2], t])), weights[1] * @inline(op(input_field[k, indices[1], t])))
 end
 
 @inbounds @inline function weighted_sum(input_field::AbstractVector, weights::NTuple{N}, indices::NTuple{N}, op::F = Base.identity) where {N, F <: Function}
-    @inbounds muladd(weights[1], @inline(op(input_field[indices[1]])), weighted_sum(input_field, dropfirst(weights), dropfirst(indices), op))
+    @inbounds muladd(weights[N], @inline(op(input_field[indices[N]])), weighted_sum(input_field, droplast(weights), droplast(indices), op))
 end
 
 @inbounds @inline function weighted_sum(input_field::AbstractMatrix, weights::NTuple{N}, indices::NTuple{N}, k::IntOrVecRange, op::F = Base.identity) where {N, F <: Function}
-    @inbounds muladd(weights[1], @inline(op(input_field[k, indices[1]])), weighted_sum(input_field, dropfirst(weights), dropfirst(indices), k, op))
+    @inbounds muladd(weights[N], @inline(op(input_field[k, indices[N]])), weighted_sum(input_field, droplast(weights), droplast(indices), k, op))
 end
 
 @inbounds @inline function weighted_sum(input_field::AbstractArray{<:Any, 3}, weights::NTuple{N}, indices::NTuple{N}, k::IntOrVecRange, t::Int, op::F = Base.identity) where {N, F <: Function}
-    @inbounds muladd(weights[1], @inline(op(input_field[k, indices[1], t])), weighted_sum(input_field, dropfirst(weights), dropfirst(indices), k, t, op))
+    @inbounds muladd(weights[N], @inline(op(input_field[k, indices[N], t])), weighted_sum(input_field, droplast(weights), droplast(indices), k, t, op))
 end
 
 @inline function weighted_sum(input_field::AbstractVector, weights, indices, op::F = Base.identity) where {F <: Function}

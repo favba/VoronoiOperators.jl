@@ -119,21 +119,6 @@ function compute_weights_vertex_kinetic_energy_modified!(w, aV, Lev, dc, edgesOn
     return w
 end
 
-function compute_vertex_edge_distance_periodic!(Lev, vpos, epos, edgesOnVertex, xp::Number, yp::Number)
-    @inbounds for v in eachindex(edgesOnVertex)
-        e1, e2, e3 = edgesOnVertex[v]
-        vp = vpos[v]
-        e1pos = closest(vp, epos[e1], xp, yp)
-        Lev1 = norm(e1pos - vp)
-        e2pos = closest(vp, epos[e2], xp, yp)
-        Lev2 = norm(e2pos - vp)
-        e3pos = closest(vp, epos[e3], xp, yp)
-        Lev3 = norm(e3pos - vp)
-        Lev[v] = (Lev1, Lev2, Lev3)
-    end
-    return Lev
-end
-
 struct CellKineticEnergyMPAS{N_MAX, TI, TF} <: CellKineticEnergyReconstruction{N_MAX, TI, TF}
     vertexReconstruction::VertexKineticEnergyGassmann{TI, TF}
     RinglerReconstruction::CellKineticEnergyRingler{N_MAX, TI, TF}
@@ -171,7 +156,7 @@ function CellKineticEnergyMPAS(mesh::VoronoiMesh, alpha = 1 - 0.375)
     return CellKineticEnergyMPAS(VertexKineticEnergyGassmann(mesh), CellKineticEnergyRingler(mesh), compute_vertex_to_cell_weight(mesh), mesh.cells.indices.vertices, alpha, Ref{Vector{T}}(), Ref{Matrix{T}}(), Ref{Array{T, 3}}())
 end
 
-function get_proper_kv(ckm::CellKineticEnergyMPAS, u::Vector{TF}) where {TF}
+function get_proper_kv(ckm::CellKineticEnergyMPAS, ::Vector{TF}) where {TF}
     if !isassigned(ckm.kv1d)
         ckm.kv1d[] = Vector{TF}(undef, length(ckm.vertexReconstruction.indices))
     end

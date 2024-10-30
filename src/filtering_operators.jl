@@ -35,14 +35,15 @@ end
 function compute_cell_box_filter_weights_and_indices_periodic(Δ::Number, c_position, areaCell, cellsOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, verticesOnCell, v_position, xp::Number, yp::Number) where {N_MAX}
     nCells = length(areaCell)
     w = zeros(eltype(areaCell), 255, nCells) # I'm assuming the filtering stencil won't be larger than 255, which is the maximum number of elements supported by ImmutableVectors
-    inds = zeros(Int, 255, nCells)
-    nElementsOnCell = zeros(Int, nCells)
+    IT = eltype(eltype(cellsOnCell))
+    inds = zeros(IT, 255, nCells)
+    nElementsOnCell = zeros(IT, nCells)
     r = Δ / 2
     r2 = r * r
 
-    checked_cells_task = TaskLocalValue{OrderedSet{Int}}(() -> OrderedSet{Int}()) # To store cells that were already checked
-    cells_to_check_task = TaskLocalValue{OrderedSet{Int}}(() -> OrderedSet{Int}()) # Set of cells we want to check
-    neighbour_cells_task = TaskLocalValue{OrderedSet{Int}}(() -> OrderedSet{Int}()) # Set of cells surrounding a given cell
+    checked_cells_task = TaskLocalValue{OrderedSet{IT}}(() -> OrderedSet{IT}()) # To store cells that were already checked
+    cells_to_check_task = TaskLocalValue{OrderedSet{IT}}(() -> OrderedSet{IT}()) # Set of cells we want to check
+    neighbour_cells_task = TaskLocalValue{OrderedSet{IT}}(() -> OrderedSet{IT}()) # Set of cells surrounding a given cell
 
     @parallel for c in Base.OneTo(nCells)
         checked_cells = checked_cells_task[]
@@ -119,7 +120,7 @@ function compute_cell_box_filter_weights_and_indices_periodic(Δ::Number, c_posi
     elseif n_max == (4 * N_MAX + 1)
         return weight_indices_matrix_to_immutable(Val{4 * N_MAX + 1}(), nElementsOnCell, inds, w)
     else
-        return weight_indices_matrix_to_immutable(Val{n_max}(), nElementsOnCell, inds, w)
+        return weight_indices_matrix_to_immutable(Val{Int(n_max)}(), nElementsOnCell, inds, w)
     end
 end
 
@@ -132,12 +133,13 @@ function compute_cell_box_filter_weights_and_indices_periodic_variable_resolutio
     nCells = length(areaCell)
     w = zeros(eltype(areaCell), 255, nCells) # I'm assuming the filtering stencil won't be larger than 255, which is the maximum number of elements supported by ImmutableVectors
     width = zeros(eltype(areaCell), nCells)
-    inds = zeros(Int, 255, nCells)
-    nElementsOnCell = zeros(Int, nCells)
+    IT = eltype(eltype(cellsOnCell))
+    inds = zeros(IT, 255, nCells)
+    nElementsOnCell = zeros(IT, nCells)
 
-    checked_cells = OrderedSet{Int}() # To store cells that were already checked
-    cells_to_check = OrderedSet{Int}() # Set of cells we want to check
-    neighbour_cells = OrderedSet{Int}() # Set of cells surrounding a given cell
+    checked_cells = OrderedSet{IT}() # To store cells that were already checked
+    cells_to_check = OrderedSet{IT}() # Set of cells we want to check
+    neighbour_cells = OrderedSet{IT}() # Set of cells surrounding a given cell
 
     for c in Base.OneTo(nCells)
         Δ = width_func(c)
@@ -214,7 +216,7 @@ function compute_cell_box_filter_weights_and_indices_periodic_variable_resolutio
     elseif n_max == (4 * N_MAX + 1)
         return (weight_indices_matrix_to_immutable(Val{4 * N_MAX + 1}(), nElementsOnCell, inds, w)..., width)
     else
-        return (weight_indices_matrix_to_immutable(Val{n_max}(), nElementsOnCell, inds, w)..., width)
+        return (weight_indices_matrix_to_immutable(Val{Int(n_max)}(), nElementsOnCell, inds, w)..., width)
     end
 end
 

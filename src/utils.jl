@@ -1,4 +1,4 @@
-const IntOrVecRange = Union{Int, <:sd.VecRange}
+const IntOrVecRange = Union{Int, Int32, <:sd.VecRange}
 
 # @inline get_node_index(i::Integer) = i
 # @inline get_node_index(k::Integer, i::Integer) = i
@@ -73,7 +73,7 @@ function to_mean_transformation!(output_field::AbstractMatrix{T}, input_field::A
 
     @parallel for i in axes(output_field, 2)
         @inbounds begin
-            inds = indices[i]
+            inds = map(Int, indices[i])
 
             for k in range_simd
                 k_simd = lane + k
@@ -100,7 +100,7 @@ function to_mean_transformation!(output_field::AbstractMatrix{T}, op_out::F, inp
 
     @parallel for i in axes(output_field, 2)
         @inbounds begin
-            inds = indices[i]
+            inds = map(Int, indices[i])
 
             for k in range_simd
                 k_simd = lane + k
@@ -127,7 +127,7 @@ function to_mean_transformation!(output_field::AbstractArray{T, 3}, input_field:
 
     @parallel for i in axes(output_field, 2)
         @inbounds begin
-            inds = indices[i]
+            inds = map(Int, indices[i])
 
             for t in axes(output_field, 3)
                 for k in range_simd
@@ -156,7 +156,7 @@ function to_mean_transformation!(output_field::AbstractArray{T, 3}, op_out::F, i
 
     @parallel for i in axes(output_field, 2)
         @inbounds begin
-            inds = indices[i]
+            inds = map(Int, indices[i])
 
             for t in axes(output_field, 3)
                 for k in range_simd
@@ -191,7 +191,7 @@ end
     muladd(weights[2], @inline(op(input_field[k, indices[2]])), weights[1] * @inline(op(input_field[k, indices[1]])))
 end
 
-@inbounds @inline function weighted_sum(input_field::AbstractArray{<:Any, 3}, weights::NTuple{2}, indices::NTuple{2}, k::IntOrVecRange, t::Int, op::F = Base.identity) where {F <: Function}
+@inbounds @inline function weighted_sum(input_field::AbstractArray{<:Any, 3}, weights::NTuple{2}, indices::NTuple{2}, k::IntOrVecRange, t::Integer, op::F = Base.identity) where {F <: Function}
     muladd(weights[2], @inline(op(input_field[k, indices[2], t])), weights[1] * @inline(op(input_field[k, indices[1], t])))
 end
 
@@ -203,7 +203,7 @@ end
     @inbounds muladd(weights[N], @inline(op(input_field[k, indices[N]])), weighted_sum(input_field, droplast(weights), droplast(indices), k, op))
 end
 
-@inbounds @inline function weighted_sum(input_field::AbstractArray{<:Any, 3}, weights::NTuple{N}, indices::NTuple{N}, k::IntOrVecRange, t::Int, op::F = Base.identity) where {N, F <: Function}
+@inbounds @inline function weighted_sum(input_field::AbstractArray{<:Any, 3}, weights::NTuple{N}, indices::NTuple{N}, k::IntOrVecRange, t::Integer, op::F = Base.identity) where {N, F <: Function}
     @inbounds muladd(weights[N], @inline(op(input_field[k, indices[N], t])), weighted_sum(input_field, droplast(weights), droplast(indices), k, t, op))
 end
 
@@ -225,7 +225,7 @@ end
     return r
 end
 
-@inline function weighted_sum(input_field::AbstractArray{<:Any, 3}, weights, indices, k::IntOrVecRange, t::Int, op::F = Base.identity) where {F <: Function}
+@inline function weighted_sum(input_field::AbstractArray{<:Any, 3}, weights, indices, k::IntOrVecRange, t::Integer, op::F = Base.identity) where {F <: Function}
     r = zero(Base.promote_op(*, eltype(weights), Base.promote_op(op, eltype(input_field))))
     @inbounds for i in eachindex(indices)
         ind = indices[i]
@@ -259,7 +259,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix{T}, input_fie
 
     @parallel for i in axes(output_field, 2)
         @inbounds begin
-            inds = indices[i]
+            inds = map(Int, indices[i])
             w = weights[i]
             w_simd = simd_repeat(ValN_SIMD, w)
 
@@ -289,7 +289,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix{T}, op_out::F
 
     @parallel for i in axes(output_field, 2)
         @inbounds begin
-            inds = indices[i]
+            inds = map(Int, indices[i])
             w = weights[i]
             w_simd = simd_repeat(ValN_SIMD, w)
 
@@ -319,7 +319,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{T, 3}, input_f
 
     @parallel for i in axes(output_field, 2)
         @inbounds begin
-            inds = indices[i]
+            inds = map(Int, indices[i])
             w = weights[i]
             w_simd = simd_repeat(ValN_SIMD, w)
 
@@ -351,7 +351,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{T, 3}, op_out:
 
     @parallel for i in axes(output_field, 2)
         @inbounds begin
-            inds = indices[i]
+            inds = map(Int, indices[i])
             w = weights[i]
             w_simd = simd_repeat(ValN_SIMD, w)
 

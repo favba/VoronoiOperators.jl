@@ -4,7 +4,7 @@ using OrderedCollections
 
 struct CellBoxFilter{N_MAX, TI, TF, TW <: Union{TF, Vector{TF}}} <: FilteringOperator
     weights::Vector{ImmutableVector{N_MAX, TF}}
-    indices::Vector{ImmutableVector{N_MAX, TI}}
+    indices::ImVecArray{N_MAX, TI, 1}
     width::TW
 end
 name_input(::CellBoxFilter) = "cell"
@@ -19,7 +19,7 @@ end
 function weight_indices_matrix_to_immutable(::Val{N_MAX}, nElements::AbstractVector, inds::Matrix{TI}, wm::Matrix{TF}) where {N_MAX, TI, TF}
     nCells = length(nElements)
     w = Vector{ImmutableVector{N_MAX, TF}}(undef, nCells)
-    indices = Vector{ImmutableVector{N_MAX, TI}}(undef, nCells)
+    indices = ImmutableVectorArray(Vector{NTuple{N_MAX, TI}}(undef,nCells), Vector{UInt8}(undef, nCells))
 
     @parallel for i in Base.OneTo(nCells)
         @inbounds begin
@@ -125,7 +125,7 @@ function compute_cell_box_filter_weights_and_indices_periodic(Δ::Number, c_posi
 end
 
 function CellBoxFilter(mesh::VoronoiMesh{false}, Δ::Number)
-    indices, w = compute_cell_box_filter_weights_and_indices_periodic(Δ, mesh.cells.position, mesh.cells.area, mesh.cellsOnCell, mesh.verticesOnCell, mesh.vertices.position, mesh.attributes[:x_period]::Float64, mesh.attributes[:y_period]::Float64)
+    indices, w = compute_cell_box_filter_weights_and_indices_periodic(Δ, mesh.cells.position, mesh.cells.area, mesh.cells.cells, mesh.cells.vertices, mesh.vertices.position, mesh.x_period, mesh.y_period)
     return CellBoxFilter(w, indices, Δ)
 end
 
@@ -221,16 +221,17 @@ function compute_cell_box_filter_weights_and_indices_periodic_variable_resolutio
 end
 
 function CellBoxFilter(mesh::VoronoiMesh{false}, f::Function)
-    indices, w, Δ = compute_cell_box_filter_weights_and_indices_periodic_variable_resolution(f, mesh.cells.position, mesh.cells.area, mesh.cellsOnCell, mesh.verticesOnCell, mesh.vertices.position, mesh.attributes[:x_period]::Float64, mesh.attributes[:y_period]::Float64)
+    indices, w, Δ = compute_cell_box_filter_weights_and_indices_periodic_variable_resolution(f, mesh.cells.position, mesh.cells.area, mesh.cells.cells, mesh.cells.vertices, mesh.vertices.position, mesh.x_period, mesh.y_period)
     return CellBoxFilter(w, indices, Δ)
 end
 
 function CellBoxFilter(mesh::VoronoiMesh{false}, variable_resolution::Bool = false, ratio = 2.0)
     if !variable_resolution
-        Δ = 2 * mesh.attributes[:dc]::Float64
+        #Δ = 2 * mesh.attributes[:dc]::Float64
+        Δ = 2 * (sum(mesh.edges.cellsDistance) / mesh.edges.n)
         return CellBoxFilter(mesh, Δ)
     else
-        f = let dcEdge = mesh.dcEdge, edgesOnCell = mesh.edgesOnCell
+        f = let dcEdge = mesh.edges.cellsDistance, edgesOnCell = mesh.cells.edges
             @inline function (c)
                 edges = edgesOnCell[c]
                 dcs = map(e -> dcEdge[e], edges)

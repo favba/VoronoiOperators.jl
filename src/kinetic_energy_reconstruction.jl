@@ -33,11 +33,11 @@ name_output(::CellKineticEnergyReconstruction) = "cell"
 
 struct CellKineticEnergyRingler{N_MAX, TI, TF} <: CellKineticEnergyReconstruction{N_MAX, TI, TF}
     n::Int
-    indices::Vector{ImmutableVector{N_MAX, TI}}
+    indices::ImVecArray{N_MAX, TI, 1}
     weights::Vector{ImmutableVector{N_MAX, TF}}
 end
 
-function compute_weights_ringler_kinetic_energy!(w::Vector{ImmutableVector{N_MAX, T}}, aC, Le, dc, edgesOnCell::Vector{<:ImmutableVector{N_MAX}}) where {T, N_MAX}
+function compute_weights_ringler_kinetic_energy!(w::AbstractVector{ImmutableVector{N_MAX, T}}, aC, Le, dc, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}) where {T, N_MAX}
     aux = Vector{T}(undef, N_MAX)
 
     @inbounds for c in eachindex(edgesOnCell)
@@ -55,14 +55,14 @@ function compute_weights_ringler_kinetic_energy!(w::Vector{ImmutableVector{N_MAX
     return w
 end
 
-function compute_weights_ringler_kinetic_energy(aC::Vector{T}, Le, dc, edgesOnCell::Vector{<:ImmutableVector{N_MAX}}) where {T, N_MAX}
+function compute_weights_ringler_kinetic_energy(aC::Vector{T}, Le, dc, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}) where {T, N_MAX}
     w = Vector{ImmutableVector{N_MAX, T}}(undef, length(edgesOnCell))
     return compute_weights_ringler_kinetic_energy!(w, aC, Le, dc, edgesOnCell)
 end
 
 function CellKineticEnergyRingler(cells, edges)
-    w = compute_weights_ringler_kinetic_energy(cells.area, edges.dv, edges.dc, cells.indices.edges)
-    return CellKineticEnergyRingler(edges.n, cells.indices.edges, w)
+    w = compute_weights_ringler_kinetic_energy(cells.area, edges.length, edges.cellsDistance, cells.edges)
+    return CellKineticEnergyRingler(edges.n, cells.edges, w)
 end
 
 CellKineticEnergyRingler(m::VoronoiMesh) = CellKineticEnergyRingler(m.cells, m.edges)
@@ -97,8 +97,8 @@ function compute_weights_vertex_kinetic_energy(aV, Le, dc, edgesOnVertex)
 end
 
 function VertexKineticEnergyGassmann(vertices, edges)
-    w = compute_weights_vertex_kinetic_energy(vertices.area, edges.dv, edges.dc, vertices.indices.edges)
-    return VertexKineticEnergyGassmann(edges.n, vertices.indices.edges, w)
+    w = compute_weights_vertex_kinetic_energy(vertices.area, edges.length, edges.cellsDistance, vertices.edges)
+    return VertexKineticEnergyGassmann(edges.n, vertices.edges, w)
 end
 
 VertexKineticEnergyGassmann(m::VoronoiMesh) = VertexKineticEnergyGassmann(m.vertices, m.edges)
@@ -123,14 +123,14 @@ struct CellKineticEnergyMPAS{N_MAX, TI, TF} <: CellKineticEnergyReconstruction{N
     vertexReconstruction::VertexKineticEnergyGassmann{TI, TF}
     RinglerReconstruction::CellKineticEnergyRingler{N_MAX, TI, TF}
     weightsVertexToCell::Vector{ImmutableVector{N_MAX, TF}}
-    verticesOnCell::Vector{ImmutableVector{N_MAX, TI}}
+    verticesOnCell::ImVecArray{N_MAX, TI, 1}
     alpha::TF
     kv1d::Base.RefValue{Vector{TF}}
     kv2d::Base.RefValue{Matrix{TF}}
     kv3d::Base.RefValue{Array{TF, 3}}
 end
 
-function compute_vertex_to_cell_weight!(w::Vector{ImmutableVector{N_MAX, TF}}, verticesOnCell, areaCell, kiteAreaOnVertex, cellsOnVertex) where {N_MAX, TF}
+function compute_vertex_to_cell_weight!(w::AbstractVector{ImmutableVector{N_MAX, TF}}, verticesOnCell, areaCell, kiteAreaOnVertex, cellsOnVertex) where {N_MAX, TF}
     aux = Vector{TF}(undef, N_MAX)
     @inbounds for c in eachindex(areaCell)
         Ac = areaCell[c]
@@ -139,7 +139,7 @@ function compute_vertex_to_cell_weight!(w::Vector{ImmutableVector{N_MAX, TF}}, v
         l = length(voc)
         for i in Base.OneTo(l)
             v = voc[i]
-            aux[i] = select_kite_area(kiteAreaOnVertex, cellsOnVertex, v, c) / Ac
+            aux[i] = VoronoiMeshes.select_kite_area(kiteAreaOnVertex, cellsOnVertex, v, c) / Ac
         end
         w[c] = ImmutableVector{N_MAX}(ntuple(j -> getindex(aux, j), Val{N_MAX}()), l)
     end
@@ -147,13 +147,13 @@ function compute_vertex_to_cell_weight!(w::Vector{ImmutableVector{N_MAX, TF}}, v
 end
 
 function compute_vertex_to_cell_weight(mesh::VoronoiMesh)
-    w = Vector{ImmutableVector{max_n_edges(typeof(mesh.cells)), eltype(mesh.cells.area)}}(undef, mesh.cells.n)
-    return compute_vertex_to_cell_weight!(w, mesh.verticesOnCell, mesh.areaCell, mesh.vertices.kiteAreas, mesh.cellsOnVertex)
+    w = Vector{ImmutableVector{max_edges(typeof(mesh.cells)), eltype(mesh.cells.area)}}(undef, mesh.cells.n)
+    return compute_vertex_to_cell_weight!(w, mesh.cells.vertices, mesh.cells.area, mesh.vertices.kiteAreas, mesh.vertices.cells)
 end
 
 function CellKineticEnergyMPAS(mesh::VoronoiMesh, alpha = 1 - 0.375)
-    T = float_precision(typeof(mesh.cells))
-    return CellKineticEnergyMPAS(VertexKineticEnergyGassmann(mesh), CellKineticEnergyRingler(mesh), compute_vertex_to_cell_weight(mesh), mesh.cells.indices.vertices, alpha, Ref{Vector{T}}(), Ref{Matrix{T}}(), Ref{Array{T, 3}}())
+    T = float_type(typeof(mesh.cells))
+    return CellKineticEnergyMPAS(VertexKineticEnergyGassmann(mesh), CellKineticEnergyRingler(mesh), compute_vertex_to_cell_weight(mesh), mesh.cells.vertices, alpha, Ref{Vector{T}}(), Ref{Matrix{T}}(), Ref{Array{T, 3}}())
 end
 
 function get_proper_kv(ckm::CellKineticEnergyMPAS, ::Vector{TF}) where {TF}

@@ -10,9 +10,10 @@ SIMD = "fdea26ae-647d-5447-a871-4b548cad5224"
 TaskLocalValues = "ed4db957-447d-4319-bfb6-7fa9ae7ecf34"
 TensorsLite = "1a1b94bd-d244-45e0-965a-8acfeb92b70f"
 TensorsLiteGeometry = "f9cc0174-84f8-4243-a119-6cf6c33db921"
-VoronoiMeshDataStruct = "8a938a65-3ddb-45e8-9de7-ea9d95686e1a"
+VoronoiMeshes = "978c199f-fe38-4011-9fe6-317bc1cdd350"
 
 [compat]
+VoronoiMeshes = "1.0.0"
 julia = "1.9"
 
 [extras]

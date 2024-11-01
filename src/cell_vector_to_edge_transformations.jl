@@ -101,11 +101,11 @@ struct VecCellToEdgeMean{TI, TF, Tz} <: VecCellToEdgeTransformation
     normalVectors::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
 end
 
-VecCellToEdgeMean(cells::Union{<:CellBase, <:CellInfo}, edges::EdgeInfo) = VecCellToEdgeMean(cells.n, edges.indices.cells, edges.normalVectors)
+VecCellToEdgeMean(cells::Cells, edges::Edges) = VecCellToEdgeMean(cells.n, edges.cells, edges.normal)
 
 function VecCellToEdgeMean(mesh::VoronoiMesh)
     isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
-    VecCellToEdgeMean(mesh.cells.base, mesh.edges)
+    VecCellToEdgeMean(mesh.cells, mesh.edges)
 end
 
 @inbounds @inline (vc2e::VecCellToEdgeMean)(c_field::AbstractArray{<:Any, N}, inds::Vararg{T, N}) where {N, T <: Integer} = vec_to_edge_mean_transformation(vc2e.normalVectors, c_field, inds, vc2e.cellsOnEdge)

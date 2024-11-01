@@ -4,11 +4,11 @@ name_output(::CellVelocityReconstruction) = "cell"
 
 struct CellVelocityReconstructionPerot{N_MAX, TF, TI, TZ} <: CellVelocityReconstruction{N_MAX, TF, TI}
     n::Int
-    indices::Vector{ImmutableVector{N_MAX, TI}}
+    indices::ImVecArray{N_MAX, TI, 1}
     weights::Vector{ImmutableVector{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}}}
 end
 
-function compute_weights_perot_velocity_reconstruction_periodic!(w::Vector{ImmutableVector{N_MAX, T}}, c_pos, aC, Le, ne, edgesOnCell::Vector{<:ImmutableVector{N_MAX}}, v_pos, verticesOnEdge, xp::Number, yp::Number) where {T, N_MAX}
+function compute_weights_perot_velocity_reconstruction_periodic!(w::AbstractVector{ImmutableVector{N_MAX, T}}, c_pos, aC, Le, ne, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, v_pos, verticesOnEdge, xp::Number, yp::Number) where {T, N_MAX}
 
     @parallel for c in eachindex(edgesOnCell)
         @inbounds begin
@@ -35,19 +35,18 @@ function compute_weights_perot_velocity_reconstruction_periodic!(w::Vector{Immut
     return w
 end
 
-function CellVelocityReconstructionPerot(cells::CellInfo{false, N_MAX}, edges::EdgeInfo, vertices::VertexInfo, x_period::Number, y_period::Number) where {N_MAX}
-    edgesOnCell = cells.indices.edges
+function CellVelocityReconstructionPerot(cells::Cells{false, N_MAX}, edges::Edges, vertices::Vertices, x_period::Number, y_period::Number) where {N_MAX}
+    edgesOnCell = cells.edges
     weights = Vector{ImmutableVector{N_MAX, eltype(cells.position)}}(undef, cells.n)
-    compute_weights_perot_velocity_reconstruction_periodic!(weights, cells.position, cells.area, edges.dv, edges.normalVectors, edgesOnCell, vertices.position, edges.indices.vertices, x_period, y_period)
+    compute_weights_perot_velocity_reconstruction_periodic!(weights, cells.position, cells.area, edges.length, edges.normal, edgesOnCell, vertices.position, edges.vertices, x_period, y_period)
     return CellVelocityReconstructionPerot(edges.n, edgesOnCell, weights)
 end
 
 function CellVelocityReconstructionPerot(mesh::VoronoiMesh{false})
-    isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
-    CellVelocityReconstructionPerot(mesh.cells, mesh.edges, mesh.vertices, mesh.attributes[:x_period]::Float64, mesh.attributes[:y_period]::Float64)
+    CellVelocityReconstructionPerot(mesh.cells, mesh.edges, mesh.vertices, mesh.x_period, mesh.y_period)
 end
 
-function compute_weights_perot_velocity_reconstruction_spherical!(w::Vector{ImmutableVector{N_MAX, T}}, c_pos, aC, Le, ne, edgesOnCell::Vector{<:ImmutableVector{N_MAX}}, v_pos, verticesOnEdge) where {T, N_MAX}
+function compute_weights_perot_velocity_reconstruction_spherical!(w::AbstractVector{ImmutableVector{N_MAX, T}}, c_pos, aC, Le, ne, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, v_pos, verticesOnEdge) where {T, N_MAX}
 
     R = norm(c_pos[1])
 
@@ -80,16 +79,13 @@ function compute_weights_perot_velocity_reconstruction_spherical!(w::Vector{Immu
     return w
 end
 
-function CellVelocityReconstructionPerot(cells::CellInfo{true, N_MAX}, edges::EdgeInfo{true}, vertices::VertexInfo{true}) where {N_MAX}
-    edgesOnCell = cells.indices.edges
+function CellVelocityReconstructionPerot(cells::Cells{true, N_MAX}, edges::Edges{true}, vertices::Vertices{true}) where {N_MAX}
+    edgesOnCell = cells.edges
     weights = Vector{ImmutableVector{N_MAX, eltype(cells.position)}}(undef, cells.n)
-    compute_weights_perot_velocity_reconstruction_spherical!(weights, cells.position, cells.area, edges.dv, edges.normalVectors, edgesOnCell, vertices.position, edges.indices.vertices)
+    compute_weights_perot_velocity_reconstruction_spherical!(weights, cells.position, cells.area, edges.length, edges.normal, edgesOnCell, vertices.position, edges.vertices)
     return CellVelocityReconstructionPerot(edges.n, edgesOnCell, weights)
 end
 
 function CellVelocityReconstructionPerot(mesh::VoronoiMesh{true})
-    #isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
-    compute_edge_normals!(mesh)
     CellVelocityReconstructionPerot(mesh.cells, mesh.edges, mesh.vertices)
 end
-

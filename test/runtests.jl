@@ -1,6 +1,6 @@
 using TensorsLite, TensorsLiteGeometry, ImmutableVectors
 using NCDatasets
-using VoronoiMeshDataStruct
+using VoronoiMeshes
 using VoronoiOperators
 using Test
 
@@ -72,8 +72,7 @@ end
 
 @testset "Cell Velocity / Kinetic Energy Reconstruction" begin
     for mesh in (mesh_iso, mesh_distorted)
-        isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
-        ue1D = dot.(mesh.edges.normalVectors, (v,))
+        ue1D = dot.(mesh.edges.normal, (v,))
         ue2D = similar(ue1D, (10, nedges))
         ue3D = similar(ue1D, (10, nedges, 2))
         for k in 1:10
@@ -114,7 +113,7 @@ end
 @testset "Gradient at Edge" begin
     for mesh in (mesh_iso, mesh_distorted)
         c_field = dot.((v,), mesh.cells.position)
-        grad_c_field = dot.((v,), mesh.edges.normalVectors)
+        grad_c_field = dot.((v,), mesh.edges.normal)
         mask = periodic_edges_mask(mesh)
         grad_c_masked = grad_c_field[mask]
 
@@ -161,8 +160,7 @@ end
 
 @testset "Divergence at Cell" begin
     for mesh in (mesh_iso, mesh_distorted)
-        isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
-        ue1D = dot.(mesh.edges.normalVectors, (v,))
+        ue1D = dot.(mesh.edges.normal, (v,))
         ue2D = similar(ue1D, (10, nedges))
         ue3D = similar(ue1D, (10, nedges, 2))
         for k in 1:10
@@ -224,10 +222,8 @@ end
 
 @testset "Tangential Velocity Reconstruction" begin
     for mesh in (mesh_iso, mesh_distorted)
-        isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
-        ue1D = dot.(mesh.edges.normalVectors, (v,))
-        isdefined(mesh.edges, :tangentialVectors) || compute_edge_tangents!(mesh)
-        ut1D = dot.(mesh.edges.tangentialVectors, (v,))
+        ue1D = dot.(mesh.edges.normal, (v,))
+        ut1D = dot.(mesh.edges.tangent, (v,))
         ue2D = similar(ue1D, (10, nedges))
         ut2D = similar(ut1D, (10, nedges))
         ue3D = similar(ue1D, (10, nedges, 2))
@@ -253,8 +249,7 @@ v_field_for_curl(𝐱) = 𝐤 × 𝐱
 
 @testset "Curl at Vertex" begin
     for mesh in (mesh_iso, mesh_distorted)
-        isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
-        e_field = dot.(v_field_for_curl.(mesh.edges.position), mesh.edges.normalVectors)
+        e_field = dot.(v_field_for_curl.(mesh.edges.position), mesh.edges.normal)
         mask = periodic_vertices_mask(mesh)
 
         curl_v = CurlAtVertex(mesh)
@@ -290,8 +285,7 @@ end
 
 @testset "Curl at Edge" begin
     for mesh in (mesh_iso, mesh_distorted)
-        isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
-        e_field = dot.(v_field_for_curl.(mesh.edges.position), mesh.edges.normalVectors)
+        e_field = dot.(v_field_for_curl.(mesh.edges.position), mesh.edges.normal)
         mask_edges = periodic_edges_mask(mesh)
 
         curl_e = CurlAtEdge(mesh)

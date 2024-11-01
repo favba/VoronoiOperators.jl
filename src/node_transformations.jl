@@ -14,8 +14,8 @@ transformation_function!(out_field::AbstractArray, in_field::AbstractArray, Vop:
 
 transformation_function!(out_field::AbstractArray, opt_out::F, in_field::AbstractArray, Vop::VertexToEdgeMean, op::F2) where {F <: Function, F2 <: Function} = to_mean_transformation!(out_field, opt_out, in_field, Vop.indices, op)
 
-VertexToEdgeMean(vertices::Union{<:VertexBase, <:VertexInfo}, edges::Union{<:EdgeBase, <:EdgeInfo}) = VertexToEdgeMean(vertices.n, edges.indices.vertices)
-VertexToEdgeMean(mesh::VoronoiMesh) = VertexToEdgeMean(mesh.vertices.base, mesh.edges.base)
+VertexToEdgeMean(vertices::Vertices, edges::Edges) = VertexToEdgeMean(vertices.n, edges.vertices)
+VertexToEdgeMean(mesh::VoronoiMesh) = VertexToEdgeMean(mesh.vertices, mesh.edges)
 
 struct VertexToEdgeWeighted{TI, TF} <: VertexToEdgeTransformation
     n::Int
@@ -74,27 +74,27 @@ function compute_interpolation_weights_vertex_to_edge(epos, vpos, voe, dvEdge)
     return weights
 end
 
-function compute_interpolation_weights_vertex_to_edge(vertices::Union{<:VertexBase{false}, <:VertexInfo{false}}, edges::EdgeInfo{false}, xp::Number, yp::Number)
-    return compute_interpolation_weights_vertex_to_edge_periodic(edges.position, vertices.position, edges.indices.vertices, edges.dv, xp, yp)
+function compute_interpolation_weights_vertex_to_edge(vertices::Vertices{false}, edges::Edges{false}, xp::Number, yp::Number)
+    return compute_interpolation_weights_vertex_to_edge_periodic(edges.position, vertices.position, edges.vertices, edges.length, xp, yp)
 end
 
-function VertexToEdgeInterpolation(vertices::Union{<:VertexBase{false}, <:VertexInfo{false}}, edges::EdgeInfo{false}, xp::Number, yp::Number)
+function VertexToEdgeInterpolation(vertices::Vertices{false}, edges::Edges{false}, xp::Number, yp::Number)
     weights = compute_interpolation_weights_vertex_to_edge(vertices, edges, xp, yp)
-    return VertexToEdgeInterpolation(VertexToEdgeWeighted(vertices.n, edges.indices.vertices, weights))
+    return VertexToEdgeInterpolation(VertexToEdgeWeighted(vertices.n, edges.vertices, weights))
 end
 
-VertexToEdgeInterpolation(mesh::VoronoiMesh{false}) = VertexToEdgeInterpolation(mesh.vertices.base, mesh.edges, mesh.attributes[:x_period]::Float64, mesh.attributes[:y_period]::Float64)
+VertexToEdgeInterpolation(mesh::VoronoiMesh{false}) = VertexToEdgeInterpolation(mesh.vertices, mesh.edges, mesh.x_period, mesh.y_period)
 
-function compute_interpolation_weights_vertex_to_edge(vertices::Union{<:VertexBase{true}, <:VertexInfo{true}}, edges::EdgeInfo{true})
-    return compute_interpolation_weights_vertex_to_edge(edges.position, vertices.position, edges.indices.vertices, edges.dv)
+function compute_interpolation_weights_vertex_to_edge(vertices::Vertices{true}, edges::Edges{true})
+    return compute_interpolation_weights_vertex_to_edge(edges.position, vertices.position, edges.vertices, edges.length)
 end
 
-function VertexToEdgeInterpolation(vertices::Union{<:VertexBase{true}, <:VertexInfo{true}}, edges::EdgeInfo{true})
+function VertexToEdgeInterpolation(vertices::Vertices{true}, edges::Edges{true})
     weights = compute_interpolation_weights_vertex_to_edge(vertices, edges)
-    return VertexToEdgeInterpolation(VertexToEdgeWeighted(vertices.n, edges.indices.vertices, weights))
+    return VertexToEdgeInterpolation(VertexToEdgeWeighted(vertices.n, edges.vertices, weights))
 end
 
-VertexToEdgeInterpolation(mesh::VoronoiMesh{true}) = VertexToEdgeInterpolation(mesh.vertices.base, mesh.edges)
+VertexToEdgeInterpolation(mesh::VoronoiMesh{true}) = VertexToEdgeInterpolation(mesh.vertices, mesh.edges)
 
 struct VertexToEdgePiecewise{TI, TF} <: VertexToEdgeTransformation
     base::VertexToEdgeWeighted{TI, TF}
@@ -113,21 +113,21 @@ function Base.getproperty(v2e::VertexToEdgePiecewise, s::Symbol)
     end
 end
 
-function VertexToEdgePiecewise(vertices::Union{<:VertexBase{false}, <:VertexInfo{false}}, edges::EdgeInfo{false}, xp::Number, yp::Number)
+function VertexToEdgePiecewise(vertices::Vertices{false}, edges::Edges{false}, xp::Number, yp::Number)
     weights = compute_interpolation_weights_vertex_to_edge(vertices, edges, xp, yp)
     weights .= reverse.(weights)
-    return VertexToEdgePiecewise(VertexToEdgeWeighted(vertices.n, edges.indices.vertices, weights))
+    return VertexToEdgePiecewise(VertexToEdgeWeighted(vertices.n, edges.vertices, weights))
 end
 
-VertexToEdgePiecewise(mesh::VoronoiMesh{false}) = VertexToEdgePiecewise(mesh.vertices.base, mesh.edges, mesh.attributes[:x_period]::Float64, mesh.attributes[:y_period]::Float64)
+VertexToEdgePiecewise(mesh::VoronoiMesh{false}) = VertexToEdgePiecewise(mesh.vertices, mesh.edges, mesh.x_period, mesh.y_period)
 
-function VertexToEdgePiecewise(vertices::Union{<:VertexBase{true}, <:VertexInfo{true}}, edges::EdgeInfo{true})
+function VertexToEdgePiecewise(vertices::Vertices{true}, edges::Edges{true})
     weights = compute_interpolation_weights_vertex_to_edge(vertices, edges)
     weights .= reverse.(weights)
-    return VertexToEdgePiecewise(VertexToEdgeWeighted(vertices.n, edges.indices.vertices, weights))
+    return VertexToEdgePiecewise(VertexToEdgeWeighted(vertices.n, edges.vertices, weights))
 end
 
-VertexToEdgePiecewise(mesh::VoronoiMesh{true}) = VertexToEdgePiecewise(mesh.vertices.base, mesh.edges)
+VertexToEdgePiecewise(mesh::VoronoiMesh{true}) = VertexToEdgePiecewise(mesh.vertices, mesh.edges)
 
 struct VertexToEdgeArea{TI, TF} <: VertexToEdgeTransformation
     base::VertexToEdgeWeighted{TI, TF}
@@ -162,12 +162,12 @@ function compute_area_weights_vertex_to_edge(voe, areaTriangles)
     return weights
 end
 
-function VertexToEdgeArea(vertices::VertexInfo, edges::Union{<:EdgeInfo, <:EdgeBase})
-    weights = compute_area_weights_vertex_to_edge(edges.indices.vertices, vertices.area)
-    return VertexToEdgeArea(VertexToEdgeWeighted(vertices.n, edges.indices.vertices, weights))
+function VertexToEdgeArea(vertices::Vertices, edges::Edges)
+    weights = compute_area_weights_vertex_to_edge(edges.vertices, vertices.area)
+    return VertexToEdgeArea(VertexToEdgeWeighted(vertices.n, edges.vertices, weights))
 end
 
-VertexToEdgeArea(mesh::VoronoiMesh) = VertexToEdgeArea(mesh.vertices, mesh.edges.base)
+VertexToEdgeArea(mesh::VoronoiMesh) = VertexToEdgeArea(mesh.vertices, mesh.edges)
 
 abstract type CellToEdgeTransformation <: LinearVoronoiOperator end
 
@@ -185,8 +185,8 @@ transformation_function!(out_field::AbstractArray, in_field::AbstractArray, Vop:
 
 transformation_function!(out_field::AbstractArray, opt_out::F, in_field::AbstractArray, Vop::CellToEdgeMean, op::F2 = Base.identity) where {F <: Function, F2 <: Function} = to_mean_transformation!(out_field, opt_out, in_field, Vop.indices, op)
 
-CellToEdgeMean(cells::Union{<:CellBase, <:CellInfo}, edges::Union{<:EdgeBase, <:EdgeInfo}) = CellToEdgeMean(cells.n, edges.indices.cells)
-CellToEdgeMean(mesh::VoronoiMesh) = CellToEdgeMean(mesh.cells.base, mesh.edges.base)
+CellToEdgeMean(cells::Cells, edges::Edges) = CellToEdgeMean(cells.n, edges.cells)
+CellToEdgeMean(mesh::VoronoiMesh) = CellToEdgeMean(mesh.cells, mesh.edges)
 
 struct CellToEdgeBaricentric{TI, TF} <: CellToEdgeTransformation
     n::Int
@@ -255,8 +255,8 @@ end
 function compute_baricentric_cell_to_edge(m::VoronoiMesh{false})
     compute_baricentric_cell_to_edge_periodic(
         m.edges.position, m.cells.position, m.vertices.position, m.vertices.area,
-        m.edges.indices.vertices, m.vertices.indices.cells,
-        m.attributes[:x_period]::Float64, m.attributes[:y_period]::Float64
+        m.edges.vertices, m.vertices.cells,
+        m.x_period, m.y_period
     )
 end
 
@@ -329,12 +329,12 @@ end
 function compute_baricentric_cell_to_edge(m::VoronoiMesh{true})
     compute_baricentric_cell_to_edge(
         m.cells.position, m.vertices.position, m.vertices.area,
-        m.edges.indices.vertices, m.vertices.indices.cells
+        m.edges.vertices, m.vertices.cells
     )
 end
 
 function CellToEdgeBaricentric(m::VoronoiMesh)
     weights, cellsOnEdgeBaricentric = compute_baricentric_cell_to_edge(m)
-    ncells = m.nCells
+    ncells = m.cells.n
     return CellToEdgeBaricentric(ncells, cellsOnEdgeBaricentric, weights)
 end

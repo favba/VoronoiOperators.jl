@@ -1,6 +1,6 @@
 module VoronoiOperators
 
-using TensorsLite, TensorsLiteGeometry, ImmutableVectors, VoronoiMeshDataStruct
+using TensorsLite, TensorsLiteGeometry, ImmutableVectors, VoronoiMeshes
 using TaskLocalValues
 import SIMD as sd
 

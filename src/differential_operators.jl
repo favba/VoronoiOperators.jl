@@ -9,7 +9,7 @@ end
 name_input(::GradientAtEdge) = "cell"
 name_output(::GradientAtEdge) = "edge"
 
-GradientAtEdge(mesh::VoronoiMesh) = GradientAtEdge(mesh.cells.n, mesh.edges.dc, mesh.edges.cellsOnEdge)
+GradientAtEdge(mesh::VoronoiMesh) = GradientAtEdge(mesh.cells.n, mesh.edges.cellsDistance, mesh.edges.cells)
 
 function gradient_at_edge!(out::AbstractVector, c_field, dc, cellsOnEdge, op::F = Base.identity) where {F <: Function}
     @parallel for e in eachindex(cellsOnEdge)
@@ -242,14 +242,14 @@ end
 
 struct DivAtCell{N_MAX, TI, TF} <: DifferentialOperator
     n::Int
-    indices::Vector{ImmutableVector{N_MAX, TI}}
+    indices::ImVecArray{N_MAX, TI, 1}
     weights::Vector{ImmutableVector{N_MAX, TF}}
 end
 
 name_input(::DivAtCell) = "edge"
 name_output(::DivAtCell) = "cell"
 
-function compute_div_at_cell_weights(areaCell, edgesOnCell::Vector{<:ImmutableVector{N_MAX}}, dvEdge::AbstractVector{T}, cellsOnEdge) where {N_MAX, T}
+function compute_div_at_cell_weights(areaCell, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, dvEdge::AbstractVector{T}, cellsOnEdge) where {N_MAX, T}
     w = Vector{ImmutableVector{N_MAX, T}}(undef, length(areaCell))
     aux = Vector{T}(undef, N_MAX)
 
@@ -262,7 +262,7 @@ function compute_div_at_cell_weights(areaCell, edgesOnCell::Vector{<:ImmutableVe
         for i in Base.OneTo(l)
             e = eoc[i]
             Le = dvEdge[e]
-            aux[i] = Le * inv_a * VoronoiMeshDataStruct.sign_edge(cellsOnEdge[e], c)
+            aux[i] = Le * inv_a * VoronoiMeshes.sign_edge(cellsOnEdge[e], c)
         end
         w[c] = ImmutableVector{N_MAX}(ntuple(j -> getindex(aux, j), Val{N_MAX}()), l)
     end
@@ -270,8 +270,8 @@ function compute_div_at_cell_weights(areaCell, edgesOnCell::Vector{<:ImmutableVe
 end
 
 function DivAtCell(mesh::VoronoiMesh)
-    w = compute_div_at_cell_weights(mesh.areaCell, mesh.edgesOnCell, mesh.dvEdge, mesh.cellsOnEdge)
-    return DivAtCell(mesh.edges.n, mesh.edgesOnCell, w)
+    w = compute_div_at_cell_weights(mesh.cells.area, mesh.cells.edges, mesh.edges.length, mesh.edges.cells)
+    return DivAtCell(mesh.edges.n, mesh.cells.edges, w)
 end
 
 struct CurlAtVertex{TF, TI} <: DifferentialOperator
@@ -329,7 +329,7 @@ function compute_rotational_at_vertex_weights(areaVertex, dc, edgesOnVertex, cel
     return compute_rotational_at_vertex_weights!(weights, areaVertex, dc, edgesOnVertex, cellsOnVertex, cellsOnEdge)
 end
 
-CurlAtVertex(mesh::VoronoiMesh) = CurlAtVertex(mesh.edges.n, compute_rotational_at_vertex_weights(mesh.vertices.area, mesh.edges.dc, mesh.edgesOnVertex, mesh.cellsOnVertex, mesh.cellsOnEdge), mesh.edgesOnVertex)
+CurlAtVertex(mesh::VoronoiMesh) = CurlAtVertex(mesh.edges.n, compute_rotational_at_vertex_weights(mesh.vertices.area, mesh.edges.cellsDistance, mesh.vertices.edges, mesh.vertices.cells, mesh.edges.cells), mesh.vertices.edges)
 
 struct CurlAtEdge{TF, TI} <: DifferentialOperator
     weights::Vector{NTuple{4, TF}}
@@ -384,4 +384,4 @@ function compute_rotational_at_edge_weights(areaVertex, dc, edgesOnVertex, cells
     return compute_rotational_at_edge_weights!(weights, indices, areaVertex, dc, edgesOnVertex, cellsOnEdge, verticesOnEdge)
 end
 
-CurlAtEdge(mesh::VoronoiMesh) = CurlAtEdge(compute_rotational_at_edge_weights(mesh.vertices.area, mesh.edges.dc, mesh.edgesOnVertex, mesh.cellsOnEdge, mesh.verticesOnEdge)...)
+CurlAtEdge(mesh::VoronoiMesh) = CurlAtEdge(compute_rotational_at_edge_weights(mesh.vertices.area, mesh.edges.cellsDistance, mesh.vertices.edges, mesh.edges.cells, mesh.edges.vertices)...)

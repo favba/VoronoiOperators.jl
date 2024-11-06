@@ -57,8 +57,7 @@ function compute_interpolation_weights_vertex_to_edge_periodic(epos, vpos, voe, 
     return weights
 end
 
-function compute_interpolation_weights_vertex_to_edge(epos, vpos, voe, dvEdge)
-    R = norm(epos[1])
+function compute_interpolation_weights_vertex_to_edge(R::Real, epos, vpos, voe, dvEdge)
     weights = Vector{NTuple{2, eltype(dvEdge)}}(undef, length(epos))
     @parallel for e in eachindex(voe)
         @inbounds begin
@@ -86,7 +85,7 @@ end
 VertexToEdgeInterpolation(mesh::VoronoiMesh{false}) = VertexToEdgeInterpolation(mesh.vertices, mesh.edges, mesh.x_period, mesh.y_period)
 
 function compute_interpolation_weights_vertex_to_edge(vertices::Vertices{true}, edges::Edges{true})
-    return compute_interpolation_weights_vertex_to_edge(edges.position, vertices.position, edges.vertices, edges.length)
+    return compute_interpolation_weights_vertex_to_edge(edges.sphere_radius, edges.position, vertices.position, edges.vertices, edges.length)
 end
 
 function VertexToEdgeInterpolation(vertices::Vertices{true}, edges::Edges{true})
@@ -260,8 +259,7 @@ function compute_baricentric_cell_to_edge(m::VoronoiMesh{false})
     )
 end
 
-function compute_baricentric_cell_to_edge!(w, inds, cell_pos, v_pos, areaTriangle, verticesOnEdge, cellsOnVertex)
-    R = norm(edge_pos[1])
+function compute_baricentric_cell_to_edge!(R, w, inds, cell_pos, v_pos, areaTriangle, verticesOnEdge, cellsOnVertex)
 
     @parallel for e in eachindex(verticesOnEdge)
         @inbounds begin
@@ -319,16 +317,16 @@ function compute_baricentric_cell_to_edge!(w, inds, cell_pos, v_pos, areaTriangl
     return w, inds
 end
 
-function compute_baricentric_cell_to_edge(cell_pos, vertex_pos, areaTriangle, verticesOnEdge, cellsOnVertex)
+function compute_baricentric_cell_to_edge(R, cell_pos, vertex_pos, areaTriangle, verticesOnEdge, cellsOnVertex)
     TF = eltype(cell_pos.x)
     w = Vector{NTuple{3, TF}}(undef, length(verticesOnEdge))
     inds = Vector{NTuple{3, eltype(eltype(verticesOnEdge))}}(undef, length(verticesOnEdge))
-    return compute_baricentric_cell_to_edge!(w, inds, cell_pos, vertex_pos, areaTriangle, verticesOnEdge, cellsOnVertex)
+    return compute_baricentric_cell_to_edge!(R, w, inds, cell_pos, vertex_pos, areaTriangle, verticesOnEdge, cellsOnVertex)
 end
 
 function compute_baricentric_cell_to_edge(m::VoronoiMesh{true})
     compute_baricentric_cell_to_edge(
-        m.cells.position, m.vertices.position, m.vertices.area,
+        m.sphere_radius, m.cells.position, m.vertices.position, m.vertices.area,
         m.edges.vertices, m.vertices.cells
     )
 end

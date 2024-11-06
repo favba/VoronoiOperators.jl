@@ -46,9 +46,7 @@ function CellVelocityReconstructionPerot(mesh::VoronoiMesh{false})
     CellVelocityReconstructionPerot(mesh.cells, mesh.edges, mesh.vertices, mesh.x_period, mesh.y_period)
 end
 
-function compute_weights_perot_velocity_reconstruction_spherical!(w::AbstractVector{ImmutableVector{N_MAX, T}}, c_pos, aC, Le, ne, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, v_pos, verticesOnEdge) where {T, N_MAX}
-
-    R = norm(c_pos[1])
+function compute_weights_perot_velocity_reconstruction_spherical!(w::AbstractVector{ImmutableVector{N_MAX, T}}, R::Number, c_pos, aC, Le, ne, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, v_pos, verticesOnEdge) where {T, N_MAX}
 
     @parallel for c in eachindex(edgesOnCell)
         @inbounds begin
@@ -82,7 +80,7 @@ end
 function CellVelocityReconstructionPerot(cells::Cells{true, N_MAX}, edges::Edges{true}, vertices::Vertices{true}) where {N_MAX}
     edgesOnCell = cells.edges
     weights = Vector{ImmutableVector{N_MAX, eltype(cells.position)}}(undef, cells.n)
-    compute_weights_perot_velocity_reconstruction_spherical!(weights, cells.position, cells.area, edges.length, edges.normal, edgesOnCell, vertices.position, edges.vertices)
+    compute_weights_perot_velocity_reconstruction_spherical!(weights, cells.sphere_radius, cells.position, cells.area, edges.length, edges.normal, edgesOnCell, vertices.position, edges.vertices)
     return CellVelocityReconstructionPerot(edges.n, edgesOnCell, weights)
 end
 

@@ -4,17 +4,20 @@ using VoronoiMeshes
 using VoronoiOperators
 using Test
 
-const mesh_iso = NCDataset("mesh.nc") do f
-    VoronoiMesh(f)
-end
-const mesh_distorted = NCDataset("mesh_distorted.nc") do f
-    VoronoiMesh(f)
-end
+const mesh_iso = VoronoiMesh("mesh.nc")
+const mesh_distorted = VoronoiMesh("mesh_distorted.nc")
+const mesh_spherical = VoronoiMesh("x1.4002.grid.nc")
+
 const ncells = mesh_iso.cells.n
 const nvertex = mesh_iso.vertices.n
 const nedges = mesh_iso.edges.n
 
+const ncells_s = mesh_spherical.cells.n
+const nvertex_s = mesh_spherical.vertices.n
+const nedges_s = mesh_spherical.edges.n
+
 const v = 3.0𝐢 + 4.0𝐣
+const vs = v + 5.0𝐤
 
 @testset "Vertex to Edge Transformations" begin
 
@@ -38,6 +41,25 @@ const v = 3.0𝐢 + 4.0𝐣
                 e_field = v2e(field)
                 @test all(isequal(2.0𝐢 + 2.0𝐣), v2e(e_field, +, field))
             end
+        end
+    end
+
+    vert_const_field1D = ones(nvertex_s)
+
+    vert_const_vec_field1D = VecArray(x = ones(nvertex_s), y = ones(nvertex_s), z= ones(nvertex_s))
+
+    mesh = mesh_spherical
+
+    for v2e in (VertexToEdgeMean(mesh), VertexToEdgeInterpolation(mesh), VertexToEdgePiecewise(mesh), VertexToEdgeArea(mesh))
+        for field in (vert_const_field1D,)
+            @test all(isequal(1), v2e(field))
+            e_field = v2e(field)
+            @test all(isequal(2), v2e(e_field, +, field))
+        end
+        for field in (vert_const_vec_field1D,)
+            @test all(isequal(1.0𝐢 + 1.0𝐣 + 1.0𝐤), v2e(field))
+            e_field = v2e(field)
+            @test all(isequal(2.0𝐢 + 2.0𝐣 + 2.0𝐤), v2e(e_field, +, field))
         end
     end
 
@@ -67,8 +89,31 @@ end
         end
     end
 
+    cell_const_field1D = ones(ncells_s)
+
+    cell_const_vec_field1D = VecArray(x = ones(ncells_s), y = ones(ncells_s), z = ones(ncells_s))
+
+    mesh = mesh_spherical
+
+    for c2e in (CellToEdgeMean(mesh), CellToEdgeBaricentric(mesh))
+        for field in (cell_const_field1D, )
+            @test all(isapprox(1), c2e(field))
+            e_field = c2e(field)
+            @test all(isapprox(2), c2e(e_field, +, field))
+        end
+        for field in (cell_const_vec_field1D, )
+            @test all(isapprox(1.0𝐢 + 1.0𝐣 + 1.0𝐤), c2e(field))
+            e_field = c2e(field)
+            @test all(isapprox(2.0𝐢 + 2.0𝐣 + 2.0𝐤), c2e(e_field, +, field))
+        end
+     end
+
 end
 
+const axis = normalize(mesh_spherical.cells.position[1])
+const cell_Vec_field = axis .× mesh_spherical.cells.position
+const edge_Vec_field = (axis .× mesh_spherical.edges.position) .⋅ mesh_spherical.edges.normal
+const cell_kinetic_energy = (cell_Vec_field .⋅ cell_Vec_field) ./ 2
 
 @testset "Cell Velocity / Kinetic Energy Reconstruction" begin
     for mesh in (mesh_iso, mesh_distorted)
@@ -108,6 +153,27 @@ end
             end
         end
     end
+
+    mesh = mesh_spherical
+    ueND = edge_Vec_field
+
+    for uR in (CellVelocityReconstructionPerot(mesh),)
+        field = uR(ueND)
+        @test all(x -> isapprox(x[1], x[2], rtol=1e-3, atol=1e-15), zip(cell_Vec_field, field))
+        @test all(x -> isapprox(2*x[1], x[2], rtol=1e-3, atol=2e-15), zip(cell_Vec_field, uR(field, +, ueND)))
+
+        for kR in (CellKineticEnergyVelRecon(uR),)
+            fieldk = kR(ueND)
+            @test all(x -> isapprox(x[1], x[2], rtol = 1e-3, atol= 1e-30), zip(cell_kinetic_energy, fieldk))
+            @test all(x -> isapprox(2*x[1], x[2], rtol = 1e-3, atol = 2e-30), zip(cell_kinetic_energy, kR(fieldk, +, ueND)))
+        end
+    end
+    for kR in (CellKineticEnergyRingler(mesh), CellKineticEnergyMPAS(mesh))
+        fieldk = kR(ueND)
+        @test all(x -> isapprox(x[1], x[2]; rtol = 1e-1, atol = 0.001), zip(cell_kinetic_energy, fieldk))
+        @test all(x -> isapprox(2*x[1], x[2]; rtol = 1e-1, atol = 0.002), zip(cell_kinetic_energy, kR(fieldk, +, ueND)))
+    end
+
 end
 
 @testset "Gradient at Edge" begin

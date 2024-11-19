@@ -6,7 +6,7 @@ using Test
 
 const mesh_iso = VoronoiMesh("mesh.nc")
 const mesh_distorted = VoronoiMesh("mesh_distorted.nc")
-const mesh_spherical = VoronoiMesh("x1.4002.grid.nc")
+const mesh_spherical = VoronoiMesh("spherical_grid_500km.nc")
 
 const ncells = mesh_iso.cells.n
 const nvertex = mesh_iso.vertices.n
@@ -110,9 +110,10 @@ end
 
 end
 
-const axis = normalize(mesh_spherical.cells.position[1])
+const axis = normalize(mesh_spherical.cells.position[20])
 const cell_Vec_field = axis .× mesh_spherical.cells.position
 const edge_Vec_field = (axis .× mesh_spherical.edges.position) .⋅ mesh_spherical.edges.normal
+const edge_tVec_field = (axis .× mesh_spherical.edges.position) .⋅ mesh_spherical.edges.tangent
 const cell_kinetic_energy = (cell_Vec_field .⋅ cell_Vec_field) ./ 2
 
 @testset "Cell Velocity / Kinetic Energy Reconstruction" begin
@@ -307,11 +308,21 @@ end
             @test all(map((x, y) -> isapprox(x, y; atol = 2.0), utND, tvr(ueND)))
         end
     end
+
+    mesh = mesh_spherical
+    ue1D = edge_Vec_field
+    ut1D = edge_tVec_field
+
+    tvr = TangentialVelocityReconstructionThuburn(mesh)
+    @test all(map((x, y) -> isapprox(x, y; atol = 2.0), ut1D, tvr(ue1D)))
 end
 
 # v =  𝐤 × 𝐫 (where 𝐫 = x𝐢 + y𝐣)
 v_field_for_curl(𝐱) = 𝐤 × 𝐱
 # ∇ × v = 2𝐤
+
+#spherical grid
+vertex_curl_field = 2 .* ( axis .⋅ normalize.(mesh_spherical.vertices.position))
 
 @testset "Curl at Vertex" begin
     for mesh in (mesh_iso, mesh_distorted)
@@ -347,7 +358,17 @@ v_field_for_curl(𝐱) = 𝐤 × 𝐱
         @test all(isapprox(3.0), curl_v(v_field3D, +, e_field3D)[:, mask, :])
     end
 
+    mesh = mesh_spherical
+
+    e_field = edge_Vec_field
+    curl_v = CurlAtVertex(mesh)
+    @test isapprox(vertex_curl_field, curl_v(e_field), rtol=1e-2)
+
+    v_field = ones(nvertex_s)
+    @test isapprox(vertex_curl_field .+ 1, curl_v(v_field, +, e_field), rtol=1e-2)
 end
+
+edge_curl_field = 2 .* ( axis .⋅ normalize.(mesh_spherical.edges.position))
 
 @testset "Curl at Edge" begin
     for mesh in (mesh_iso, mesh_distorted)
@@ -385,4 +406,13 @@ end
         @test all(isapprox(3.0), curl_e(o_field3D, +, e_field3D)[:, mask, :])
     end
 
+    mesh = mesh_spherical
+
+    e_field = edge_Vec_field
+    curl_e = CurlAtEdge(mesh)
+    isapprox(edge_curl_field, curl_e(e_field), rtol=1e-2)
+
+    ee_field = ones(nedges_s)
+    isapprox(edge_curl_field .+ 1, curl_e(ee_field, +, e_field), rtol=1e-2)
 end
+

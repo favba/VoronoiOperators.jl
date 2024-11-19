@@ -5,7 +5,7 @@ n_input(a::TangentialVelocityReconstruction) = n_output(a)
 
 struct TangentialVelocityReconstructionThuburn{N_MAX, TF, TI} <: TangentialVelocityReconstruction{N_MAX, TF, TI}
     indices::ImVecArray{N_MAX, TI, 1}
-    weights::ImVecArray{N_MAX, TF}
+    weights::ImVecArray{N_MAX, TF, 1}
 end
 
 function compute_weightsOnEdge_trisk!(edgesOnEdge::AbstractVector{<:ImmutableVector{NE, TI}}, weightsOnEdge::AbstractVector{<:ImmutableVector{NE, TF}}, cellsOnEdge, verticesOnCell, edgesOnCell, dcEdge, dvEdge, kiteAreasOnVertex, cellsOnVertex, nEdgesOnCell, areaCell) where {NE, TI, TF}

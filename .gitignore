@@ -1,1 +1,4 @@
 /Manifest.toml
+lcov.info
+*.cov
+/test/*.toml

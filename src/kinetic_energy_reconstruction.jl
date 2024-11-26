@@ -61,7 +61,7 @@ function compute_weights_ringler_kinetic_energy(aC::Vector{T}, Le, dc, edgesOnCe
 end
 
 function CellKineticEnergyRingler(cells, edges)
-    w = compute_weights_ringler_kinetic_energy(cells.area, edges.length, edges.cellsDistance, cells.edges)
+    w = compute_weights_ringler_kinetic_energy(cells.area, edges.length, edges.lengthDual, cells.edges)
     return CellKineticEnergyRingler(edges.n, cells.edges, w)
 end
 
@@ -97,7 +97,7 @@ function compute_weights_vertex_kinetic_energy(aV, Le, dc, edgesOnVertex)
 end
 
 function VertexKineticEnergyGassmann(vertices, edges)
-    w = compute_weights_vertex_kinetic_energy(vertices.area, edges.length, edges.cellsDistance, vertices.edges)
+    w = compute_weights_vertex_kinetic_energy(vertices.area, edges.length, edges.lengthDual, vertices.edges)
     return VertexKineticEnergyGassmann(edges.n, vertices.edges, w)
 end
 

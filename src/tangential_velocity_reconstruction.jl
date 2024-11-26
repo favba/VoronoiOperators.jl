@@ -60,7 +60,7 @@ function compute_weightsOnEdge_trisk!(edgesOnEdge::AbstractVector{<:ImmutableVec
 end
 
 function compute_weightsOnEdge_trisk!(indices, w, cells::Cells,vertices::Vertices, edges::Edges)
-    return compute_weightsOnEdge_trisk!(indices, w, edges.cells, cells.vertices, cells.edges, edges.cellsDistance, edges.length, vertices.kiteAreas, vertices.cells, cells.nEdges, cells.area)
+    return compute_weightsOnEdge_trisk!(indices, w, edges.cells, cells.vertices, cells.edges, edges.lengthDual, edges.length, vertices.kiteAreas, vertices.cells, cells.nEdges, cells.area)
 end
 
 compute_weightsOnEdge_trisk!(indices, weightsOnEdge,mesh::VoronoiMesh) = compute_weightsOnEdge_trisk!(indices, weightsOnEdge, mesh.cells, mesh.vertices, mesh.edges)

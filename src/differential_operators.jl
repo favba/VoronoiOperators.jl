@@ -9,7 +9,7 @@ end
 name_input(::GradientAtEdge) = "cell"
 name_output(::GradientAtEdge) = "edge"
 
-GradientAtEdge(mesh::VoronoiMesh) = GradientAtEdge(mesh.cells.n, mesh.edges.lengthDual, mesh.edges.cells)
+GradientAtEdge(mesh::AbstractVoronoiMesh) = GradientAtEdge(mesh.cells.n, mesh.edges.lengthDual, mesh.edges.cells)
 
 function gradient_at_edge!(out::AbstractVector, c_field, dc, cellsOnEdge, op::F = Base.identity) where {F <: Function}
     @parallel for e in eachindex(cellsOnEdge)
@@ -269,7 +269,7 @@ function compute_div_at_cell_weights(areaCell, edgesOnCell::AbstractVector{<:Imm
     return w
 end
 
-function DivAtCell(mesh::VoronoiMesh)
+function DivAtCell(mesh::AbstractVoronoiMesh)
     w = compute_div_at_cell_weights(mesh.cells.area, mesh.cells.edges, mesh.edges.length, mesh.edges.cells)
     return DivAtCell(mesh.edges.n, mesh.cells.edges, w)
 end
@@ -329,7 +329,7 @@ function compute_rotational_at_vertex_weights(areaVertex, dc, edgesOnVertex, cel
     return compute_rotational_at_vertex_weights!(weights, areaVertex, dc, edgesOnVertex, cellsOnVertex, cellsOnEdge)
 end
 
-CurlAtVertex(mesh::VoronoiMesh) = CurlAtVertex(mesh.edges.n, compute_rotational_at_vertex_weights(mesh.vertices.area, mesh.edges.lengthDual, mesh.vertices.edges, mesh.vertices.cells, mesh.edges.cells), mesh.vertices.edges)
+CurlAtVertex(mesh::AbstractVoronoiMesh) = CurlAtVertex(mesh.edges.n, compute_rotational_at_vertex_weights(mesh.vertices.area, mesh.edges.lengthDual, mesh.vertices.edges, mesh.vertices.cells, mesh.edges.cells), mesh.vertices.edges)
 
 struct CurlAtEdge{TI, TF} <: DifferentialOperator
     weights::Vector{NTuple{4, TF}}
@@ -384,4 +384,4 @@ function compute_rotational_at_edge_weights(areaVertex, dc, edgesOnVertex, cells
     return compute_rotational_at_edge_weights!(weights, indices, areaVertex, dc, edgesOnVertex, cellsOnEdge, verticesOnEdge)
 end
 
-CurlAtEdge(mesh::VoronoiMesh) = CurlAtEdge(compute_rotational_at_edge_weights(mesh.vertices.area, mesh.edges.lengthDual, mesh.vertices.edges, mesh.edges.cells, mesh.edges.vertices)...)
+CurlAtEdge(mesh::AbstractVoronoiMesh) = CurlAtEdge(compute_rotational_at_edge_weights(mesh.vertices.area, mesh.edges.lengthDual, mesh.vertices.edges, mesh.edges.cells, mesh.edges.vertices)...)

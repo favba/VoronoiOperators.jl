@@ -42,7 +42,7 @@ function CellVelocityReconstructionPerot(cells::Cells{false, N_MAX}, edges::Edge
     return CellVelocityReconstructionPerot(edges.n, edgesOnCell, weights)
 end
 
-function CellVelocityReconstructionPerot(mesh::VoronoiMesh{false})
+function CellVelocityReconstructionPerot(mesh::AbstractVoronoiMesh{false})
     CellVelocityReconstructionPerot(mesh.cells, mesh.edges, mesh.vertices, mesh.x_period, mesh.y_period)
 end
 
@@ -84,6 +84,6 @@ function CellVelocityReconstructionPerot(cells::Cells{true, N_MAX}, edges::Edges
     return CellVelocityReconstructionPerot(edges.n, edgesOnCell, weights)
 end
 
-function CellVelocityReconstructionPerot(mesh::VoronoiMesh{true})
+function CellVelocityReconstructionPerot(mesh::AbstractVoronoiMesh{true})
     CellVelocityReconstructionPerot(mesh.cells, mesh.edges, mesh.vertices)
 end

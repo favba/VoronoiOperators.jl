@@ -65,7 +65,7 @@ function CellKineticEnergyRingler(cells, edges)
     return CellKineticEnergyRingler(edges.n, cells.edges, w)
 end
 
-CellKineticEnergyRingler(m::VoronoiMesh) = CellKineticEnergyRingler(m.cells, m.edges)
+CellKineticEnergyRingler(m::AbstractVoronoiMesh) = CellKineticEnergyRingler(m.cells, m.edges)
 
 abstract type VertexKineticEnergyReconstruction{TI, TF} <: KineticEnergyReconstruction end
 name_output(::VertexKineticEnergyReconstruction) = "vertex"
@@ -101,7 +101,7 @@ function VertexKineticEnergyGassmann(vertices, edges)
     return VertexKineticEnergyGassmann(edges.n, vertices.edges, w)
 end
 
-VertexKineticEnergyGassmann(m::VoronoiMesh) = VertexKineticEnergyGassmann(m.vertices, m.edges)
+VertexKineticEnergyGassmann(m::AbstractVoronoiMesh) = VertexKineticEnergyGassmann(m.vertices, m.edges)
 
 function compute_weights_vertex_kinetic_energy_modified!(w, aV, Lev, dc, edgesOnVertex)
 
@@ -146,12 +146,12 @@ function compute_vertex_to_cell_weight!(w::AbstractVector{ImmutableVector{N_MAX,
     return w
 end
 
-function compute_vertex_to_cell_weight(mesh::VoronoiMesh)
+function compute_vertex_to_cell_weight(mesh::AbstractVoronoiMesh)
     w = Vector{ImmutableVector{max_edges(typeof(mesh.cells)), eltype(mesh.cells.area)}}(undef, mesh.cells.n)
     return compute_vertex_to_cell_weight!(w, mesh.cells.vertices, mesh.cells.area, mesh.vertices.kiteAreas, mesh.vertices.cells)
 end
 
-function CellKineticEnergyMPAS(mesh::VoronoiMesh, alpha = 1 - 0.375)
+function CellKineticEnergyMPAS(mesh::AbstractVoronoiMesh, alpha = 1 - 0.375)
     T = float_type(typeof(mesh.cells))
     return CellKineticEnergyMPAS(VertexKineticEnergyGassmann(mesh), CellKineticEnergyRingler(mesh), compute_vertex_to_cell_weight(mesh), mesh.cells.vertices, alpha, Ref{Vector{T}}(), Ref{Matrix{T}}(), Ref{Array{T, 3}}())
 end
@@ -234,7 +234,7 @@ struct CellKineticEnergyVelRecon{N_MAX, TI, TF, TR <: CellVelocityReconstruction
     uR::TR
 end
 
-CellKineticEnergyPerot(mesh::VoronoiMesh) = CellKineticEnergyVelRecon(CellVelocityReconstructionPerot(mesh))
+CellKineticEnergyPerot(mesh::AbstractVoronoiMesh) = CellKineticEnergyVelRecon(CellVelocityReconstructionPerot(mesh))
 
 @inline kinetic_energy(x) = 0.5 * (x ⋅ x)
 @inline kinetic_energy(y, x) = 0.5 * (x ⋅ x)

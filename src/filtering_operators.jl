@@ -124,7 +124,7 @@ function compute_cell_box_filter_weights_and_indices_periodic(Δ::Number, c_posi
     end
 end
 
-function CellBoxFilter(mesh::VoronoiMesh{false}, Δ::Number)
+function CellBoxFilter(mesh::AbstractVoronoiMesh{false}, Δ::Number)
     indices, w = compute_cell_box_filter_weights_and_indices_periodic(Δ, mesh.cells.position, mesh.cells.area, mesh.cells.cells, mesh.cells.vertices, mesh.vertices.position, mesh.x_period, mesh.y_period)
     return CellBoxFilter(w, indices, Δ)
 end
@@ -220,12 +220,12 @@ function compute_cell_box_filter_weights_and_indices_periodic_variable_resolutio
     end
 end
 
-function CellBoxFilter(mesh::VoronoiMesh{false}, f::Function)
+function CellBoxFilter(mesh::AbstractVoronoiMesh{false}, f::Function)
     indices, w, Δ = compute_cell_box_filter_weights_and_indices_periodic_variable_resolution(f, mesh.cells.position, mesh.cells.area, mesh.cells.cells, mesh.cells.vertices, mesh.vertices.position, mesh.x_period, mesh.y_period)
     return CellBoxFilter(w, indices, Δ)
 end
 
-function CellBoxFilter(mesh::VoronoiMesh{false}, variable_resolution::Bool = false, ratio = 2.0)
+function CellBoxFilter(mesh::AbstractVoronoiMesh{false}, variable_resolution::Bool = false, ratio = 2.0)
     if !variable_resolution
         #Δ = 2 * mesh.attributes[:dc]::Float64
         Δ = 2 * (sum(mesh.edges.lengthDual) / mesh.edges.n)

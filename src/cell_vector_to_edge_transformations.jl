@@ -103,7 +103,7 @@ end
 
 VecCellToEdgeMean(cells::Cells, edges::Edges) = VecCellToEdgeMean(cells.n, edges.cells, edges.normal)
 
-function VecCellToEdgeMean(mesh::VoronoiMesh)
+function VecCellToEdgeMean(mesh::AbstractVoronoiMesh)
     isdefined(mesh.edges, :normalVectors) || compute_edge_normals!(mesh)
     VecCellToEdgeMean(mesh.cells, mesh.edges)
 end

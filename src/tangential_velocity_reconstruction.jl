@@ -63,15 +63,15 @@ function compute_weightsOnEdge_trisk!(indices, w, cells::Cells,vertices::Vertice
     return compute_weightsOnEdge_trisk!(indices, w, edges.cells, cells.vertices, cells.edges, edges.lengthDual, edges.length, vertices.kiteAreas, vertices.cells, cells.nEdges, cells.area)
 end
 
-compute_weightsOnEdge_trisk!(indices, weightsOnEdge,mesh::VoronoiMesh) = compute_weightsOnEdge_trisk!(indices, weightsOnEdge, mesh.cells, mesh.vertices, mesh.edges)
+compute_weightsOnEdge_trisk!(indices, weightsOnEdge,mesh::AbstractVoronoiMesh) = compute_weightsOnEdge_trisk!(indices, weightsOnEdge, mesh.cells, mesh.vertices, mesh.edges)
 
-function compute_weightsOnEdge_trisk(mesh::VoronoiMesh)
+function compute_weightsOnEdge_trisk(mesh::AbstractVoronoiMesh)
     nEdgesOnEdge = maximum(x->(x[1] + x[2] - 2), ((a,inds) -> @inbounds((a[inds[1]], a[inds[2]]))).((mesh.cells.nEdges,), mesh.edges.cells))
     indices =ImVecArray{nEdgesOnEdge, integer_type(mesh)}(mesh.edges.n)
     weights =ImmutableVectorArray(Vector{NTuple{nEdgesOnEdge, float_type(mesh)}}(undef, mesh.edges.n), indices.length)
     return compute_weightsOnEdge_trisk!(indices, weights, mesh)
 end
 
-function TangentialVelocityReconstructionThuburn(mesh::VoronoiMesh)
+function TangentialVelocityReconstructionThuburn(mesh::AbstractVoronoiMesh)
     return TangentialVelocityReconstructionThuburn(compute_weightsOnEdge_trisk(mesh)...)
 end

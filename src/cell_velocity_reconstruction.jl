@@ -1,8 +1,8 @@
-abstract type CellVelocityReconstruction{N_MAX, TF, TI} <: LinearVoronoiOperator end
+abstract type CellVelocityReconstruction{N_MAX, TI, TF} <: LinearVoronoiOperator end
 name_input(::CellVelocityReconstruction) = "edge"
 name_output(::CellVelocityReconstruction) = "cell"
 
-struct CellVelocityReconstructionPerot{N_MAX, TF, TI, TZ} <: CellVelocityReconstruction{N_MAX, TF, TI}
+struct CellVelocityReconstructionPerot{N_MAX, TI, TF, TZ} <: CellVelocityReconstruction{N_MAX, TI, TF}
     n::Int
     indices::ImVecArray{N_MAX, TI, 1}
     weights::Vector{ImmutableVector{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}}}

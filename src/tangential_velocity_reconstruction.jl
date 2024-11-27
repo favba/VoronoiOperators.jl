@@ -1,9 +1,9 @@
-abstract type TangentialVelocityReconstruction{N_MAX, TF, TI} <: LinearVoronoiOperator end
+abstract type TangentialVelocityReconstruction{N_MAX, TI, TF} <: LinearVoronoiOperator end
 name_input(::TangentialVelocityReconstruction) = "edge"
 name_output(::TangentialVelocityReconstruction) = "edge"
 n_input(a::TangentialVelocityReconstruction) = n_output(a)
 
-struct TangentialVelocityReconstructionThuburn{N_MAX, TF, TI} <: TangentialVelocityReconstruction{N_MAX, TF, TI}
+struct TangentialVelocityReconstructionThuburn{N_MAX, TI, TF} <: TangentialVelocityReconstruction{N_MAX, TI, TF}
     indices::ImVecArray{N_MAX, TI, 1}
     weights::ImVecArray{N_MAX, TF, 1}
 end

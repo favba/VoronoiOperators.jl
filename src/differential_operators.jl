@@ -274,7 +274,7 @@ function DivAtCell(mesh::VoronoiMesh)
     return DivAtCell(mesh.edges.n, mesh.cells.edges, w)
 end
 
-struct CurlAtVertex{TF, TI} <: DifferentialOperator
+struct CurlAtVertex{TI, TF} <: DifferentialOperator
     n::Int
     weights::Vector{NTuple{3, TF}}
     indices::Vector{NTuple{3, TI}}
@@ -331,7 +331,7 @@ end
 
 CurlAtVertex(mesh::VoronoiMesh) = CurlAtVertex(mesh.edges.n, compute_rotational_at_vertex_weights(mesh.vertices.area, mesh.edges.lengthDual, mesh.vertices.edges, mesh.vertices.cells, mesh.edges.cells), mesh.vertices.edges)
 
-struct CurlAtEdge{TF, TI} <: DifferentialOperator
+struct CurlAtEdge{TI, TF} <: DifferentialOperator
     weights::Vector{NTuple{4, TF}}
     indices::Vector{NTuple{4, TI}}
 end

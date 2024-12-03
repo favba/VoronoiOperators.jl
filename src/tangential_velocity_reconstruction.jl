@@ -75,3 +75,126 @@ end
 function TangentialVelocityReconstructionThuburn(mesh::AbstractVoronoiMesh)
     return TangentialVelocityReconstructionThuburn(compute_weightsOnEdge_trisk(mesh)...)
 end
+
+struct TangentialVelocityReconstructionPeixoto{N_MAX, TI, TF} <: TangentialVelocityReconstruction{N_MAX, TI, TF}
+    indices::ImVecArray{N_MAX, TI, 1}
+    weights::ImVecArray{N_MAX, TF, 1}
+end
+
+function compute_weightsOnEdge_Peixoto_periodic!(
+            edgesOnEdge::AbstractVector{<:ImmutableVector{NE, TI}},
+            weightsOnEdge::AbstractVector{<:ImmutableVector{NE, TF}},
+            edge_pos,
+            cell_pos,
+            v_pos,
+            cellsOnEdge,
+            verticesOnEdge,
+            edgesOnCell,
+            dvEdge,
+            nEdgesOnCell,
+            areaCell,
+            xp::Number, yp::Number
+    ) where {NE, TI, TF}
+
+    @parallel for e in eachindex(cellsOnEdge)
+        @inbounds begin
+
+        w = ImmutableVector{NE, TF}()
+        inds = ImmutableVector{NE, TI}()
+
+        ep = edge_pos[e]
+        c1,c2 = cellsOnEdge[e]
+        c1e = closest(ep, cell_pos[c1], xp ,yp)
+        c2e = closest(ep, cell_pos[c2], xp ,yp)
+
+        v1,v2 = verticesOnEdge[e]
+        v1e = closest(ep, v_pos[v1], xp ,yp)
+        v2e = closest(ep, v_pos[v2], xp ,yp)
+        te = normalize(v2e - v1e)
+
+        inds_e_c1 = edgesOnCell[c1]
+        this_e_i = findfirst(isequal(e), inds_e_c1)
+        inds_e_c1_shifted = circshift(inds_e_c1, -this_e_i)
+        nEdges_c1 = Int(nEdgesOnCell[c1])
+        a_c1 = areaCell[c1]
+
+        inds_e_c2 = edgesOnCell[c2]
+        this_e_i = findfirst(isequal(e), inds_e_c2)
+        inds_e_c2_shifted = circshift(inds_e_c2, -this_e_i)
+        nEdges_c2 = Int(nEdgesOnCell[c2])
+        a_c2 = areaCell[c2]
+
+        for i in 1:(nEdges_c1-1)
+            e_ = inds_e_c1_shifted[i]
+            v1, v2 = verticesOnEdge[e_]
+            v1p = closest(ep, v_pos[v1], xp, yp)
+            v2p = closest(ep, v_pos[v2], xp, yp)
+            emid = (v1p + v2p) / 2
+
+            r_vec = c1e - emid
+
+            c1, c2 = cellsOnEdge[e_]
+            c1p = closest(ep, cell_pos[c1], xp, yp)
+            c2p = closest(ep, cell_pos[c2], xp, yp)
+            ne = normalize(c2p - c1p)
+
+            r_vec = sign(ne ⋅ r_vec) * r_vec
+            w = push(w,  (dvEdge[e_] / (2 * a_c1)) * (r_vec ⋅ te))
+            inds = push(inds, e_)
+        end
+
+        for i in 1:(nEdges_c2-1)
+            e_ = inds_e_c2_shifted[i]
+            v1, v2 = verticesOnEdge[e_]
+            v1p = closest(ep, v_pos[v1], xp, yp)
+            v2p = closest(ep, v_pos[v2], xp, yp)
+            emid = (v1p + v2p) / 2
+
+            r_vec = c2e - emid
+
+            c1, c2 = cellsOnEdge[e_]
+            c1p = closest(ep, cell_pos[c1], xp, yp)
+            c2p = closest(ep, cell_pos[c2], xp, yp)
+            ne = normalize(c2p - c1p)
+
+            r_vec = sign(ne ⋅ r_vec) * r_vec
+            w = push(w,  (dvEdge[e_] / (2 * a_c2)) * (r_vec ⋅ te))
+            inds = push(inds, e_)
+        end
+
+        edgesOnEdge[e] = inds
+        weightsOnEdge[e] = padwith(w, zero(TF))
+        end #inbounds
+    end
+    return edgesOnEdge, weightsOnEdge
+end
+
+function compute_weightsOnEdge_Peixoto!(indices, w, cells::Cells{false},vertices::Vertices{false}, edges::Edges{false})
+    return compute_weightsOnEdge_Peixoto_periodic!(
+        indices,
+        w,
+        edges.position,
+        cells.position,
+        vertices.position,
+        edges.cells,
+        edges.vertices,
+        cells.edges,
+        edges.length,
+        cells.nEdges,
+        cells.area,
+        cells.x_period, cells.y_period
+    )
+end
+
+compute_weightsOnEdge_Peixoto!(indices, weightsOnEdge,mesh::AbstractVoronoiMesh) = compute_weightsOnEdge_Peixoto!(indices, weightsOnEdge, mesh.cells, mesh.vertices, mesh.edges)
+
+function compute_weightsOnEdge_Peixoto(mesh::AbstractVoronoiMesh)
+    nEdgesOnEdge = maximum(x->(x[1] + x[2] - 2), ((a,inds) -> @inbounds((a[inds[1]], a[inds[2]]))).((mesh.cells.nEdges,), mesh.edges.cells))
+    indices =ImVecArray{nEdgesOnEdge, integer_type(mesh)}(mesh.edges.n)
+    weights =ImmutableVectorArray(Vector{NTuple{nEdgesOnEdge, float_type(mesh)}}(undef, mesh.edges.n), indices.length)
+    return compute_weightsOnEdge_Peixoto!(indices, weights, mesh)
+end
+
+function TangentialVelocityReconstructionPeixoto(mesh::AbstractVoronoiMesh)
+    return TangentialVelocityReconstructionPeixoto(compute_weightsOnEdge_Peixoto(mesh)...)
+end

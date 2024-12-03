@@ -303,9 +303,11 @@ end
             ue3D[:, :, t] .= ue2D
             ut3D[:, :, t] .= ut2D
         end
-        tvr = TangentialVelocityReconstructionThuburn(mesh)
-        for (utND, ueND) in ((ut1D, ue1D), (ut2D, ue2D), (ut3D, ue3D))
-            @test all(map((x, y) -> isapprox(x, y; atol = 2.0), utND, tvr(ueND)))
+        for tvr in (TangentialVelocityReconstructionThuburn(mesh), TangentialVelocityReconstructionPeixoto(mesh))
+            for (utND, ueND) in ((ut1D, ue1D), (ut2D, ue2D), (ut3D, ue3D))
+                atol = typeof(tvr) <: TangentialVelocityReconstructionThuburn ? 2.0 : 0.1
+                @test all(map((x, y) -> isapprox(x, y; atol = atol), utND, tvr(ueND)))
+            end
         end
     end
 

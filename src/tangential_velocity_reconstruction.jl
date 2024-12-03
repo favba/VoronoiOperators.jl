@@ -192,6 +192,7 @@ function compute_weightsOnEdge_Peixoto_spherical!(
             R::Number,
             cell_pos,
             v_pos,
+            edge_tan,
             cellsOnEdge,
             verticesOnEdge,
             edgesOnCell,
@@ -212,17 +213,9 @@ function compute_weightsOnEdge_Peixoto_spherical!(
         c2e = cell_pos[c2]
         c2en = c2e / R
 
-        v1,v2 = verticesOnEdge[e]
-        v1en = v_pos[v1] / R
-        v2en = v_pos[v2] / R
-
-        v1ec1 = v1en * (R / (v1en ⋅ c1en))
-        v2ec1 = v2en * (R / (v2en ⋅ c1en))
-        te_c1 = normalize(v2ec1 - v1ec1)
-
-        v1ec2 = v1en * (R / (v1en ⋅ c2en))
-        v2ec2 = v2en * (R / (v2en ⋅ c2en))
-        te_c2 = normalize(v2ec2 - v1ec2)
+        te = edge_tan[e]
+        te_c1 = normalize(te - (te ⋅ c1en)*c1en)
+        te_c2 = normalize(te - (te ⋅ c2en)*c2en)
 
         inds_e_c1 = edgesOnCell[c1]
         this_e_i = findfirst(isequal(e), inds_e_c1)
@@ -290,6 +283,7 @@ function compute_weightsOnEdge_Peixoto!(indices, w, cells::Cells{true},vertices:
         cells.sphere_radius,
         cells.position,
         vertices.position,
+        edges.tangent,
         edges.cells,
         edges.vertices,
         cells.edges,

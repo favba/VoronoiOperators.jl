@@ -317,6 +317,9 @@ end
 
     tvr = TangentialVelocityReconstructionThuburn(mesh)
     @test all(map((x, y) -> isapprox(x, y; atol = 2.0), ut1D, tvr(ue1D)))
+
+    tvp = TangentialVelocityReconstructionPeixoto(mesh)
+    @test all(map((x, y) -> isapprox(x, y; atol = 0.1), ut1D, tvp(ue1D)))
 end
 
 # v =  𝐤 × 𝐫 (where 𝐫 = x𝐢 + y𝐣)

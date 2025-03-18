@@ -5,11 +5,12 @@ name_output(::CellVelocityReconstruction) = "cell"
 struct CellVelocityReconstructionPerot{N_MAX, TI, TF, TZ} <: CellVelocityReconstruction{N_MAX, TI, TF}
     n::Int
     indices::ImVecArray{N_MAX, TI, 1}
-    weights::Vector{ImmutableVector{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}}}
+    weights::ImVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
 end
 
 function compute_weights_perot_velocity_reconstruction_periodic!(w::AbstractVector{ImmutableVector{N_MAX, T}}, c_pos, aC, Le, ne, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, v_pos, verticesOnEdge, xp::Number, yp::Number) where {T, N_MAX}
 
+    wdata = w.data
     @parallel for c in eachindex(edgesOnCell)
         @inbounds begin
         cp = c_pos[c]
@@ -29,15 +30,15 @@ function compute_weights_perot_velocity_reconstruction_periodic!(w::AbstractVect
             r_vec = sign(ne[e] ⋅ r_vec) * r_vec
             aux = @inbounds push(aux, inv_a * r_vec * Le[e])
         end
-        w[c] = aux
+        wdata[c] = padwith(aux, zero(T)).data
         end #inbounds
     end
     return w
 end
 
-function CellVelocityReconstructionPerot(cells::Cells{false, N_MAX}, edges::Edges, vertices::Vertices, x_period::Number, y_period::Number) where {N_MAX}
+function CellVelocityReconstructionPerot(cells::Cells{false, N_MAX, TI, TF}, edges::Edges, vertices::Vertices, x_period::Number, y_period::Number) where {N_MAX, TI, TF}
     edgesOnCell = cells.edges
-    weights = Vector{ImmutableVector{N_MAX, eltype(cells.position)}}(undef, cells.n)
+    weights =ImmutableVectorArray(Vector{NTuple{N_MAX, Vec2Dxy{TF}}}(undef, cells.n), edgesOnCell.length)
     compute_weights_perot_velocity_reconstruction_periodic!(weights, cells.position, cells.area, edges.length, edges.normal, edgesOnCell, vertices.position, edges.vertices, x_period, y_period)
     return CellVelocityReconstructionPerot(edges.n, edgesOnCell, weights)
 end
@@ -48,6 +49,7 @@ end
 
 function compute_weights_perot_velocity_reconstruction_spherical!(w::AbstractVector{ImmutableVector{N_MAX, T}}, R::Number, c_pos, aC, Le, ne, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, v_pos, verticesOnEdge) where {T, N_MAX}
 
+    wdata = w.data
     @parallel for c in eachindex(edgesOnCell)
         @inbounds begin
         cp_p = c_pos[c]
@@ -71,15 +73,15 @@ function compute_weights_perot_velocity_reconstruction_spherical!(w::AbstractVec
             r_vec = sign(ne[e] ⋅ r_vec) * r_vec
             aux = @inbounds push(aux, inv_a * r_vec * Le[e])
         end
-        w[c] = aux
+        wdata[c] = padwith(aux, zero(T)).data
         end #inbounds
     end
     return w
 end
 
-function CellVelocityReconstructionPerot(cells::Cells{true, N_MAX}, edges::Edges{true}, vertices::Vertices{true}) where {N_MAX}
+function CellVelocityReconstructionPerot(cells::Cells{true, N_MAX, TI, TF}, edges::Edges{true}, vertices::Vertices{true}) where {N_MAX, TI, TF}
     edgesOnCell = cells.edges
-    weights = Vector{ImmutableVector{N_MAX, eltype(cells.position)}}(undef, cells.n)
+    weights =ImmutableVectorArray(Vector{NTuple{N_MAX, Vec3D{TF}}}(undef, cells.n), edgesOnCell.length)
     compute_weights_perot_velocity_reconstruction_spherical!(weights, cells.sphere_radius, cells.position, cells.area, edges.length, edges.normal, edgesOnCell, vertices.position, edges.vertices)
     return CellVelocityReconstructionPerot(edges.n, edgesOnCell, weights)
 end

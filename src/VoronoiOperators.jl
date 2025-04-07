@@ -5,6 +5,7 @@ using TaskLocalValues
 import SIMD as sd
 
 export VertexToEdgeTransformation, VertexToEdgeMean, VertexToEdgeInterpolation, VertexToEdgePiecewise, VertexToEdgeArea
+export EdgeToCellTransformation, EdgeToCellRingler
 export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric
 export VecCellToEdgeTransformation
 export VecCellToEdgeMean
@@ -59,6 +60,7 @@ function (Vop::LinearVoronoiOperator)(in_field::AbstractArray, op::F = Base.iden
 end
 
 include("node_transformations.jl")
+include("edge_to_cell_transformations.jl")
 include("cell_vector_to_edge_transformations.jl")
 include("cell_velocity_reconstruction.jl")
 include("kinetic_energy_reconstruction.jl")

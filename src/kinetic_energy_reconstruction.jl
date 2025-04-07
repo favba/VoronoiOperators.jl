@@ -34,34 +34,11 @@ name_output(::CellKineticEnergyReconstruction) = "cell"
 struct CellKineticEnergyRingler{N_MAX, TI, TF} <: CellKineticEnergyReconstruction{N_MAX, TI, TF}
     n::Int
     indices::ImVecArray{N_MAX, TI, 1}
-    weights::Vector{ImmutableVector{N_MAX, TF}}
-end
-
-function compute_weights_ringler_kinetic_energy!(w::AbstractVector{ImmutableVector{N_MAX, T}}, aC, Le, dc, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}) where {T, N_MAX}
-    aux = Vector{T}(undef, N_MAX)
-
-    @inbounds for c in eachindex(edgesOnCell)
-        term = inv(aC[c] * 4)
-        fill!(aux, zero(T))
-
-        eoc = edgesOnCell[c]
-        l = length(eoc)
-        for i in Base.OneTo(l)
-            e = eoc[i]
-            aux[i] = term * Le[e] * dc[e]
-        end
-        w[c] = ImmutableVector{N_MAX}(ntuple(j -> getindex(aux, j), Val{N_MAX}()), l)
-    end
-    return w
-end
-
-function compute_weights_ringler_kinetic_energy(aC::Vector{T}, Le, dc, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}) where {T, N_MAX}
-    w = Vector{ImmutableVector{N_MAX, T}}(undef, length(edgesOnCell))
-    return compute_weights_ringler_kinetic_energy!(w, aC, Le, dc, edgesOnCell)
+    weights::ImVecArray{N_MAX, TF, 1}
 end
 
 function CellKineticEnergyRingler(cells, edges)
-    w = compute_weights_ringler_kinetic_energy(cells.area, edges.length, edges.lengthDual, cells.edges)
+    w = compute_weights_edge_to_cell_ringler(cells, edges)
     return CellKineticEnergyRingler(edges.n, cells.edges, w)
 end
 

@@ -1,11 +1,12 @@
 module VoronoiOperators
 
+using LinearAlgebra
 using TensorsLite, TensorsLiteGeometry, ImmutableVectors, VoronoiMeshes
 using TaskLocalValues
 import SIMD as sd
 
 export VertexToEdgeTransformation, VertexToEdgeMean, VertexToEdgeInterpolation, VertexToEdgePiecewise, VertexToEdgeArea
-export EdgeToCellTransformation, EdgeToCellRingler
+export EdgeToCellTransformation, EdgeToCellRingler, EdgeToCellLinearInterpolation #, EdgeToCellQuadraticInterpolation
 export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric
 export VecCellToEdgeTransformation
 export VecCellToEdgeMean

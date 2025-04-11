@@ -116,7 +116,7 @@ end
     edge_const_field3D = ones(10, nedges, 2)
 
     for mesh in (mesh_iso, mesh_distorted)
-        for e2c in (EdgeToCellRingler(mesh), EdgeToCellLinearInterpolation(mesh))
+        for e2c in (EdgeToCellRingler(mesh), EdgeToCellLSQ2(mesh), EdgeToCellLSQ3(mesh))
             for field in (edge_const_field1D, edge_const_field2D, edge_const_field3D)
                 @test all(isapprox(1), e2c(field))
                 e_field = e2c(field)
@@ -129,9 +129,9 @@ end
 
     mesh = mesh_spherical
 
-    for e2c in (EdgeToCellRingler(mesh), EdgeToCellLinearInterpolation(mesh))
+    for e2c in (EdgeToCellRingler(mesh), EdgeToCellLSQ2(mesh), EdgeToCellLSQ3(mesh))
         for field in (edge_const_field1D, )
-            if typeof(e2c) <: EdgeToCellLinearInterpolation
+            if typeof(e2c) <: EdgeToCellLSQ2 || typeof(e2c) <: EdgeToCellLSQ3
                 @test all(isapprox(1), e2c(field))
                 e_field = e2c(field)
                 @test all(isapprox(2), e2c(e_field, +, field))

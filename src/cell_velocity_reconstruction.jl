@@ -89,3 +89,103 @@ end
 function CellVelocityReconstructionPerot(mesh::AbstractVoronoiMesh{true})
     CellVelocityReconstructionPerot(mesh.cells, mesh.edges, mesh.vertices)
 end
+
+struct CellVelocityReconstructionLSQ1{N_MAX, TI, TF, TZ} <: CellVelocityReconstruction{N_MAX, TI, TF, TZ}
+    n::Int
+    indices::ImVecArray{N_MAX, TI, 1}
+    weights::ImVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
+end
+
+function compute_weights_interp_velocity_reconstruction_periodic!(w::AbstractVector{<:ImmutableVector{N_MAX, Vec2Dxy{TF}}}, ne, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}) where {TF, N_MAX}
+
+    wdata = w.data
+    @parallel for c in eachindex(edgesOnCell)
+        @inbounds begin
+
+        eoc = edgesOnCell[c]
+        l = length(eoc)
+
+        M = Matrix{TF}(undef, l, 2)
+        for i in Base.OneTo(l)
+            e = eoc[i]
+            n = ne[e]
+            M[i, 1] = n.x
+            M[i, 2] = n.y
+        end
+        MpM = cholesky!(Hermitian(M'*M))
+        P = LinearAlgebra.inv!(MpM)*M'
+
+        wx = vec(P[1,:])
+        wy = vec(P[2,:])
+
+        wa = map(x -> Vec(x = x[1], y = x[2]), zip(wx, wy))
+        w = ImmutableVector{N_MAX}(wa)
+
+        wdata[c] = padwith(w, zero(Vec2Dxy{TF})).data
+        end #inbounds
+    end
+    return w
+end
+
+function CellVelocityReconstructionLSQ1(cells::Cells{false, N_MAX, TI, TF}, edges::Edges) where {N_MAX, TI, TF}
+    edgesOnCell = cells.edges
+    weights =ImmutableVectorArray(Vector{NTuple{N_MAX, Vec2Dxy{TF}}}(undef, cells.n), edgesOnCell.length)
+    compute_weights_interp_velocity_reconstruction_periodic!(weights, edges.normal, edgesOnCell)
+    return CellVelocityReconstructionLSQ1(edges.n, edgesOnCell, weights)
+end
+
+function compute_weights_interp_velocity_reconstruction_spherical!(w::AbstractVector{<:ImmutableVector{N_MAX, Vec3D{TF}}}, ne, cpos, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, R::Number) where {TF, N_MAX}
+
+    wdata = w.data
+    @parallel for c in eachindex(edgesOnCell)
+        @inbounds begin
+
+        eoc = edgesOnCell[c]
+        l = length(eoc)
+
+        cn = cpos[c] / R
+
+        xdir = zero(Vec3D{TF})
+        ydir = zero(Vec3D{TF})
+
+        M = Matrix{TF}(undef, l, 2)
+        for i in Base.OneTo(l)
+            e = eoc[i]
+            _n = ne[e]
+            n = normalize(_n - (_n ⋅ cn)*cn)
+            if i == 1
+                xdir = n
+                ydir = normalize(cn × n)
+                M[i, 1] = oneunit(TF)
+                M[i, 2] = zero(TF)
+            else
+                M[i, 1] = n ⋅ xdir
+                M[i, 2] = n ⋅ ydir
+            end
+        end
+        MpM = cholesky!(Hermitian(M'*M))
+        P = LinearAlgebra.inv!(MpM)*M'
+
+        wx = vec(P[1,:])
+        wy = vec(P[2,:])
+
+        wa = map(x -> x[1]*xdir + x[2]*ydir, zip(wx, wy))
+        w = ImmutableVector{N_MAX}(wa)
+
+        wdata[c] = padwith(w, zero(Vec3D{TF})).data
+        end #inbounds
+    end
+    return w
+end
+
+function CellVelocityReconstructionLSQ1(cells::Cells{true, N_MAX, TI, TF}, edges::Edges) where {N_MAX, TI, TF}
+    edgesOnCell = cells.edges
+    weights =ImmutableVectorArray(Vector{NTuple{N_MAX, Vec3D{TF}}}(undef, cells.n), edgesOnCell.length)
+    compute_weights_interp_velocity_reconstruction_spherical!(weights, edges.normal, cells.position, edgesOnCell, cells.sphere_radius)
+    return CellVelocityReconstructionLSQ1(edges.n, edgesOnCell, weights)
+end
+
+function CellVelocityReconstructionLSQ1(mesh::AbstractVoronoiMesh)
+    CellVelocityReconstructionLSQ1(mesh.cells, mesh.edges)
+end
+

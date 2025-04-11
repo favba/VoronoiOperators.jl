@@ -10,7 +10,7 @@ export EdgeToCellTransformation, EdgeToCellRingler, EdgeToCellLSQ2, EdgeToCellLS
 export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric
 export VecCellToEdgeTransformation
 export VecCellToEdgeMean
-export CellVelocityReconstruction, CellVelocityReconstructionPerot
+export CellVelocityReconstruction, CellVelocityReconstructionPerot, CellVelocityReconstructionLSQ1
 export CellKineticEnergyMPAS, CellKineticEnergyRingler, CellKineticEnergyVelRecon, CellKineticEnergyPerot
 export GradientAtEdge, DivAtCell, CurlAtVertex, CurlAtEdge
 export CellBoxFilter

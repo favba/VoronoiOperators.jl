@@ -115,10 +115,7 @@ function compute_weights_interp_velocity_reconstruction_periodic!(w::AbstractVec
         MpM = cholesky!(Hermitian(M'*M))
         P = LinearAlgebra.inv!(MpM)*M'
 
-        wx = vec(P[1,:])
-        wy = vec(P[2,:])
-
-        wa = map(x -> Vec(x = x[1], y = x[2]), zip(wx, wy))
+        wa = map(x -> Vec(x = @inbounds(P[1, x]), y = @inbounds(P[2, x])), Base.OneTo(l))
         w = ImmutableVector{N_MAX}(wa)
 
         wdata[c] = padwith(w, zero(Vec2Dxy{TF})).data
@@ -166,10 +163,7 @@ function compute_weights_interp_velocity_reconstruction_spherical!(w::AbstractVe
         MpM = cholesky!(Hermitian(M'*M))
         P = LinearAlgebra.inv!(MpM)*M'
 
-        wx = vec(P[1,:])
-        wy = vec(P[2,:])
-
-        wa = map(x -> x[1]*xdir + x[2]*ydir, zip(wx, wy))
+        wa = map(x -> @inbounds(P[1,x])*xdir + @inbounds(P[2,x])*ydir, Base.OneTo(l))
         w = ImmutableVector{N_MAX}(wa)
 
         wdata[c] = padwith(w, zero(Vec3D{TF})).data

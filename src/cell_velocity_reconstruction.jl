@@ -140,7 +140,7 @@ function compute_weights_interp_velocity_reconstruction_spherical!(w::AbstractVe
         eoc = edgesOnCell[c]
         l = length(eoc)
 
-        cn = cpos[c] / R
+        cp = cpos[c] / R
 
         xdir = zero(Vec3D{TF})
         ydir = zero(Vec3D{TF})
@@ -149,10 +149,10 @@ function compute_weights_interp_velocity_reconstruction_spherical!(w::AbstractVe
         for i in Base.OneTo(l)
             e = eoc[i]
             _n = ne[e]
-            n = normalize(_n - (_n ⋅ cn)*cn)
+            n = normalize(_n - (_n ⋅ cp)*cp)
             if i == 1
                 xdir = n
-                ydir = normalize(cn × n)
+                ydir = normalize(cp × n)
                 M[i, 1] = oneunit(TF)
                 M[i, 2] = zero(TF)
             else

@@ -187,9 +187,12 @@ function compute_weights_edge_to_cell_quadratic_interpolation_periodic!(w::ImVec
             #Perform regularization if condition number is too big (or Inf)
             #Regularize only quadratic terms, to preserve 1st order and 2nd order terms
             cn = cond(MpM)
-            while cn > 1e5
+            ii = 0
+            while cn > 5e6
+                ii += 1
+                #@show c, ii, cn
                 for i in 4:6
-                    MpM[i, i] += 1e-5
+                    MpM[i, i] += 1e-6
                 end
                 cn = cond(MpM)
             end
@@ -257,9 +260,12 @@ function compute_weights_edge_to_cell_quadratic_interpolation_spherical!(w::ImVe
 
             MpM = Hermitian(M'*M)
             cn = cond(MpM)
-            while cn > 1e5
+            ii = 0
+            while cn > 5e6
+                ii += 1
+                #@show c, ii, cn
                 for i in 4:6
-                    MpM[i, i] += 1e-5
+                    MpM[i, i] += 1e-6
                 end
                 cn = cond(MpM)
             end

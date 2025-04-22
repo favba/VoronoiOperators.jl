@@ -337,9 +337,14 @@ end
             ue3D[:, :, t] .= ue2D
             ut3D[:, :, t] .= ut2D
         end
-        for tvr in (TangentialVelocityReconstructionThuburn(mesh), TangentialVelocityReconstructionPeixoto(mesh))
+        for tvr in (TangentialVelocityReconstructionThuburn(mesh),
+                    TangentialVelocityReconstructionPeixoto(mesh),
+                    TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionLSq1(mesh)),
+                    TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionLSq2(mesh)))
             for (utND, ueND) in ((ut1D, ue1D), (ut2D, ue2D), (ut3D, ue3D))
-                atol = typeof(tvr) <: TangentialVelocityReconstructionThuburn ? 2.0 : 0.1
+                atol = typeof(tvr) <: TangentialVelocityReconstructionThuburn ? 2.0 :
+                    typeof(tvr) <: TangentialVelocityReconstructionVelRecon ? 0.36 :
+                        0.1
                 @test all(map((x, y) -> isapprox(x, y; atol = atol), utND, tvr(ueND)))
             end
         end
@@ -354,6 +359,12 @@ end
 
     tvp = TangentialVelocityReconstructionPeixoto(mesh)
     @test all(map((x, y) -> isapprox(x, y; atol = 0.1), ut1D, tvp(ue1D)))
+
+    tvlsq1 = TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionLSq1(mesh))
+    @test all(map((x, y) -> isapprox(x, y; atol = 0.1), ut1D, tvlsq1(ue1D)))
+
+    tvlsq2 = TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionLSq2(mesh))
+    @test all(map((x, y) -> isapprox(x, y; atol = 0.1), ut1D, tvlsq2(ue1D)))
 end
 
 # v =  𝐤 × 𝐫 (where 𝐫 = x𝐢 + y𝐣)

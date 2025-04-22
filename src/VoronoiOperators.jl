@@ -14,7 +14,7 @@ export CellVelocityReconstruction, CellVelocityReconstructionPerot, CellVelocity
 export CellKineticEnergyMPAS, CellKineticEnergyRingler, CellKineticEnergyVelRecon, CellKineticEnergyPerot
 export GradientAtEdge, DivAtCell, CurlAtVertex, CurlAtEdge
 export CellBoxFilter
-export TangentialVelocityReconstruction, TangentialVelocityReconstructionThuburn, TangentialVelocityReconstructionPeixoto
+export TangentialVelocityReconstruction, TangentialVelocityReconstructionThuburn, TangentialVelocityReconstructionPeixoto, TangentialVelocityReconstructionVelRecon
 
 include("utils.jl")
 

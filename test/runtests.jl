@@ -116,7 +116,7 @@ end
     edge_const_field3D = ones(10, nedges, 2)
 
     for mesh in (mesh_iso, mesh_distorted)
-        for e2c in (EdgeToCellRingler(mesh), EdgeToCellLSQ2(mesh), EdgeToCellLSQ3(mesh))
+        for e2c in (EdgeToCellRingler(mesh), EdgeToCellLSq2(mesh), EdgeToCellLSq3(mesh))
             for field in (edge_const_field1D, edge_const_field2D, edge_const_field3D)
                 @test all(isapprox(1), e2c(field))
                 e_field = e2c(field)
@@ -129,9 +129,9 @@ end
 
     mesh = mesh_spherical
 
-    for e2c in (EdgeToCellRingler(mesh), EdgeToCellLSQ2(mesh), EdgeToCellLSQ3(mesh))
+    for e2c in (EdgeToCellRingler(mesh), EdgeToCellLSq2(mesh), EdgeToCellLSq3(mesh))
         for field in (edge_const_field1D, )
-            if typeof(e2c) <: EdgeToCellLSQ2 || typeof(e2c) <: EdgeToCellLSQ3
+            if typeof(e2c) <: EdgeToCellLSq2 || typeof(e2c) <: EdgeToCellLSq3
                 @test all(isapprox(1), e2c(field))
                 e_field = e2c(field)
                 @test all(isapprox(2), e2c(e_field, +, field))
@@ -161,7 +161,7 @@ const cell_kinetic_energy = (cell_Vec_field .⋅ cell_Vec_field) ./ 2
         for t in 1:2
             ue3D[:, :, t] .= ue2D
         end
-        for uR in (CellVelocityReconstructionPerot(mesh), CellVelocityReconstructionLSQ1(mesh), CellVelocityReconstructionLSQ2(mesh))
+        for uR in (CellVelocityReconstructionPerot(mesh), CellVelocityReconstructionLSq1(mesh), CellVelocityReconstructionLSq2(mesh))
             for ueND in (ue1D, ue2D, ue3D)
                 @test all(isapprox(3.0𝐢 + 4.0𝐣), uR(ueND))
                 field = uR(ueND)
@@ -192,7 +192,7 @@ const cell_kinetic_energy = (cell_Vec_field .⋅ cell_Vec_field) ./ 2
     mesh = mesh_spherical
     ueND = edge_Vec_field
 
-    for uR in (CellVelocityReconstructionPerot(mesh), CellVelocityReconstructionLSQ1(mesh), CellVelocityReconstructionLSQ2(mesh))
+    for uR in (CellVelocityReconstructionPerot(mesh), CellVelocityReconstructionLSq1(mesh), CellVelocityReconstructionLSq2(mesh))
         field = uR(ueND)
         @test all(x -> isapprox(x[1], x[2], rtol=1e-3, atol=1e-15), zip(cell_Vec_field, field))
         @test all(x -> isapprox(2*x[1], x[2], rtol=1e-3, atol=2e-15), zip(cell_Vec_field, uR(field, +, ueND)))

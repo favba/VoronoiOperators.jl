@@ -43,7 +43,7 @@ EdgeToCellRingler(cells::Cells, edges::Edges) = EdgeToCellRingler(edges.n, cells
 
 EdgeToCellRingler(mesh::AbstractVoronoiMesh) = EdgeToCellRingler(mesh.cells, mesh.edges)
 
-struct EdgeToCellLSQ2{NEdges, TI, TF} <: EdgeToCellTransformation
+struct EdgeToCellLSq2{NEdges, TI, TF} <: EdgeToCellTransformation
     n::Int
     indices::ImVecArray{NEdges, TI, 1}
     weights::ImVecArray{NEdges, TF, 1}
@@ -145,11 +145,11 @@ compute_weights_edge_to_cell_linear_interpolation(cells::Cells{true}, edges::Edg
 
 compute_weights_edge_to_cell_linear_interpolation(mesh::AbstractVoronoiMesh) = compute_weights_edge_to_cell_linear_interpolation(mesh.cells, mesh.edges)
 
-EdgeToCellLSQ2(cells::Cells, edges::Edges) = EdgeToCellLSQ2(edges.n, cells.edges, compute_weights_edge_to_cell_linear_interpolation(cells, edges))
+EdgeToCellLSq2(cells::Cells, edges::Edges) = EdgeToCellLSq2(edges.n, cells.edges, compute_weights_edge_to_cell_linear_interpolation(cells, edges))
 
-EdgeToCellLSQ2(mesh::AbstractVoronoiMesh) = EdgeToCellLSQ2(mesh.cells, mesh.edges)
+EdgeToCellLSq2(mesh::AbstractVoronoiMesh) = EdgeToCellLSq2(mesh.cells, mesh.edges)
 
-struct EdgeToCellLSQ3{NEdges, TI, TF} <: EdgeToCellTransformation
+struct EdgeToCellLSq3{NEdges, TI, TF} <: EdgeToCellTransformation
     n::Int
     indices::ImVecArray{NEdges, TI, 1}
     weights::ImVecArray{NEdges, TF, 1}
@@ -288,7 +288,7 @@ compute_weights_edge_to_cell_quadratic_interpolation(cells::Cells{true}, edges::
 
 compute_weights_edge_to_cell_quadratic_interpolation(mesh::AbstractVoronoiMesh) = compute_weights_edge_to_cell_quadratic_interpolation(mesh.cells, mesh.edges)
 
-EdgeToCellLSQ3(cells::Cells, edges::Edges) = EdgeToCellLSQ3(edges.n, cells.edges, compute_weights_edge_to_cell_quadratic_interpolation(cells, edges))
+EdgeToCellLSq3(cells::Cells, edges::Edges) = EdgeToCellLSq3(edges.n, cells.edges, compute_weights_edge_to_cell_quadratic_interpolation(cells, edges))
 
-EdgeToCellLSQ3(mesh::AbstractVoronoiMesh) = EdgeToCellLSQ3(mesh.cells, mesh.edges)
+EdgeToCellLSq3(mesh::AbstractVoronoiMesh) = EdgeToCellLSq3(mesh.cells, mesh.edges)
 

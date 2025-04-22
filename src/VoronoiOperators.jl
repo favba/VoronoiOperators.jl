@@ -6,11 +6,11 @@ using TaskLocalValues
 import SIMD as sd
 
 export VertexToEdgeTransformation, VertexToEdgeMean, VertexToEdgeInterpolation, VertexToEdgePiecewise, VertexToEdgeArea
-export EdgeToCellTransformation, EdgeToCellRingler, EdgeToCellLSQ2, EdgeToCellLSQ3
+export EdgeToCellTransformation, EdgeToCellRingler, EdgeToCellLSq2, EdgeToCellLSq3
 export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric
 export VecCellToEdgeTransformation
 export VecCellToEdgeMean
-export CellVelocityReconstruction, CellVelocityReconstructionPerot, CellVelocityReconstructionLSQ1, CellVelocityReconstructionLSQ2
+export CellVelocityReconstruction, CellVelocityReconstructionPerot, CellVelocityReconstructionLSq1, CellVelocityReconstructionLSq2
 export CellKineticEnergyMPAS, CellKineticEnergyRingler, CellKineticEnergyVelRecon, CellKineticEnergyPerot
 export GradientAtEdge, DivAtCell, CurlAtVertex, CurlAtEdge
 export CellBoxFilter

@@ -6,7 +6,7 @@ using TaskLocalValues
 import SIMD as sd
 
 export VertexToEdgeTransformation, VertexToEdgeMean, VertexToEdgeInterpolation, VertexToEdgePiecewise, VertexToEdgeArea
-export EdgeToCellTransformation, EdgeToCellRingler, EdgeToCellLSq2, EdgeToCellLSq3
+export EdgeToCellTransformation, EdgeToCellRingler, EdgeToCellArea, EdgeToCellLSq2, EdgeToCellLSq3
 export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric
 export VecCellToEdgeTransformation
 export VecCellToEdgeMean

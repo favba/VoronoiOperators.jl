@@ -1,9 +1,9 @@
-abstract type EdgeToCellTransformation <: LinearVoronoiOperator end
+abstract type EdgeToCellTransformation{NEdges, TI, TF} <: LinearVoronoiOperator end
 
 name_input(::EdgeToCellTransformation) = "edge"
 name_output(::EdgeToCellTransformation) = "cell"
 
-struct EdgeToCellRingler{NEdges, TI, TF} <: EdgeToCellTransformation
+struct EdgeToCellRingler{NEdges, TI, TF} <: EdgeToCellTransformation{NEdges, TI, TF}
     n::Int
     indices::ImVecArray{NEdges, TI, 1}
     weights::ImVecArray{NEdges, TF, 1}
@@ -43,7 +43,58 @@ EdgeToCellRingler(cells::Cells, edges::Edges) = EdgeToCellRingler(edges.n, cells
 
 EdgeToCellRingler(mesh::AbstractVoronoiMesh) = EdgeToCellRingler(mesh.cells, mesh.edges)
 
-struct EdgeToCellLSq2{NEdges, TI, TF} <: EdgeToCellTransformation
+struct EdgeToCellArea{NEdges, TI, TF} <: EdgeToCellTransformation{NEdges, TI, TF}
+    n::Int
+    indices::ImVecArray{NEdges, TI, 1}
+    weights::ImVecArray{NEdges, TF, 1}
+end
+
+EdgeToCellArea(cells::Cells{false}, edges::Edges{false}, ::Vertices{false}) = EdgeToCellArea(edges.n, cells.edges, compute_weights_edge_to_cell_ringler(cells, edges))
+
+function compute_weights_edge_to_cell_area!(w::ImVecArray{NE, TI, 1}, areaCell::AbstractVector{TF}, cellPos, vertexPos, verticesOnCell, R::Number)  where {NE, TI, TF}
+    wdata = w.data
+
+    @parallel for c in eachindex(areaCell)
+        @inbounds begin
+
+            aux = ImmutableVector{NE,TF}()
+            A = areaCell[c]
+            c_pos = cellPos[c]
+
+            voc =verticesOnCell[c]
+            l = length(voc)
+
+            #Assuming vertex[n] is between edge[n] and edge[n+1]
+            prev_v_pos = vertexPos[voc[l]]
+            for e in Base.OneTo(l)
+                next_v_pos = vertexPos[voc[e]]
+                aux = push(aux, spherical_polygon_area(R, c_pos, prev_v_pos, next_v_pos) / A)
+                prev_v_pos = next_v_pos
+            end
+
+            #fix any float point errors (aux should sum to 1)
+            aux = aux .+ ((1 - sum(aux)) / l)
+
+            wdata[c] = padwith(aux, zero(TF)).data
+        end
+    end
+
+    return w
+end
+
+function compute_weights_edge_to_cell_area(areaCell::AbstractVector{TF}, cellPos, vertexPos, verticesOnCell::ImVecArray{NE, TI, 1}, R::Number) where {NE, TI, TF}
+    w = ImmutableVectorArray(Vector{NTuple{NE,TF}}(undef, length(areaCell)), verticesOnCell.length)
+    return compute_weights_edge_to_cell_area!(w, areaCell, cellPos, vertexPos, verticesOnCell, R)
+end
+
+compute_weights_edge_to_cell_area(cells::Cells{true}, ::Edges{true}, vertices::Vertices{true}) =
+    compute_weights_edge_to_cell_area(cells.area, cells.position, vertices.position, cells.vertices, cells.sphere_radius)
+
+EdgeToCellArea(cells::Cells{true}, edges::Edges{true}, vertices::Vertices{true}) = EdgeToCellArea(edges.n, cells.edges, compute_weights_edge_to_cell_area(cells, edges, vertices))
+
+EdgeToCellArea(mesh::AbstractVoronoiMesh) = EdgeToCellArea(mesh.cells, mesh.edges, mesh.vertices)
+
+struct EdgeToCellLSq2{NEdges, TI, TF} <: EdgeToCellTransformation{NEdges, TI, TF}
     n::Int
     indices::ImVecArray{NEdges, TI, 1}
     weights::ImVecArray{NEdges, TF, 1}
@@ -149,7 +200,7 @@ EdgeToCellLSq2(cells::Cells, edges::Edges) = EdgeToCellLSq2(edges.n, cells.edges
 
 EdgeToCellLSq2(mesh::AbstractVoronoiMesh) = EdgeToCellLSq2(mesh.cells, mesh.edges)
 
-struct EdgeToCellLSq3{NEdges, TI, TF} <: EdgeToCellTransformation
+struct EdgeToCellLSq3{NEdges, TI, TF} <: EdgeToCellTransformation{NEdges, TI, TF}
     n::Int
     indices::ImVecArray{NEdges, TI, 1}
     weights::ImVecArray{NEdges, TF, 1}

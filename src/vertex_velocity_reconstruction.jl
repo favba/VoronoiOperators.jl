@@ -78,4 +78,3 @@ VertexVelocityReconstructionPerot(mesh::AbstractVoronoiMesh) =
         mesh.vertices.edges,
         compute_weights_perot_vertex_velocity_reconstruction(mesh.cells, mesh.vertices)
     )
-

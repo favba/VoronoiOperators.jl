@@ -11,7 +11,9 @@ export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric
 export VecCellToEdgeTransformation
 export VecCellToEdgeMean
 export CellVelocityReconstruction, CellVelocityReconstructionPerot, CellVelocityReconstructionLSq1, CellVelocityReconstructionLSq2
+export VertexVelocityReconstruction, VertexVelocityReconstructionPerot
 export CellKineticEnergyMPAS, CellKineticEnergyRingler, CellKineticEnergyVelRecon, CellKineticEnergyPerot
+export VertexKineticEnergyReconstruction, VertexKineticEnergyVelRecon, VertexVelocityReconstructionPerot
 export GradientAtEdge, DivAtCell, CurlAtVertex, CurlAtEdge
 export CellBoxFilter
 export TangentialVelocityReconstruction, TangentialVelocityReconstructionThuburn, TangentialVelocityReconstructionPeixoto, TangentialVelocityReconstructionVelRecon
@@ -64,6 +66,7 @@ include("node_transformations.jl")
 include("edge_to_cell_transformations.jl")
 include("cell_vector_to_edge_transformations.jl")
 include("cell_velocity_reconstruction.jl")
+include("vertex_velocity_reconstruction.jl")
 include("kinetic_energy_reconstruction.jl")
 include("differential_operators.jl")
 include("filtering_operators.jl")

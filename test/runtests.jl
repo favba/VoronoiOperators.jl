@@ -149,8 +149,10 @@ const cell_Vec_field = axis .× mesh_spherical.cells.position
 const edge_Vec_field = (axis .× mesh_spherical.edges.position) .⋅ mesh_spherical.edges.normal
 const edge_tVec_field = (axis .× mesh_spherical.edges.position) .⋅ mesh_spherical.edges.tangent
 const cell_kinetic_energy = (cell_Vec_field .⋅ cell_Vec_field) ./ 2
+const vertex_Vec_field = axis .× mesh_spherical.vertices.position
+const vertex_kinetic_energy = (vertex_Vec_field .⋅ vertex_Vec_field) ./ 2
 
-@testset "Cell Velocity / Kinetic Energy Reconstruction" begin
+@testset "(Cell / Vertex) (Velocity / Kinetic Energy) Reconstruction" begin
     for mesh in (mesh_iso, mesh_distorted)
         ue1D = dot.(mesh.edges.normal, (v,))
         ue2D = similar(ue1D, (10, nedges))
@@ -174,6 +176,20 @@ const cell_kinetic_energy = (cell_Vec_field .⋅ cell_Vec_field) ./ 2
                 end
             end
         end
+        for uR in (VertexVelocityReconstructionPerot(mesh),)
+            for ueND in (ue1D, ue2D, ue3D)
+                @test all(isapprox(3.0𝐢 + 4.0𝐣), uR(ueND))
+                field = uR(ueND)
+                @test all(isapprox(6.0𝐢 + 8.0𝐣), uR(field, +, ueND))
+
+                for kR in (VertexKineticEnergyVelRecon(uR),)
+                    @test all(isapprox(12.5), kR(ueND))
+                    fieldk = kR(ueND)
+                    @test all(isapprox(25.0), kR(fieldk, +, ueND))
+                end
+            end
+        end
+
         for kR in (CellKineticEnergyRingler(mesh), CellKineticEnergyMPAS(mesh))
             for ueND in (ue1D, ue2D, ue3D)
                 if (mesh === mesh_iso)
@@ -207,6 +223,18 @@ const cell_kinetic_energy = (cell_Vec_field .⋅ cell_Vec_field) ./ 2
         fieldk = kR(ueND)
         @test all(x -> isapprox(x[1], x[2]; rtol = 1e-1, atol = 0.001), zip(cell_kinetic_energy, fieldk))
         @test all(x -> isapprox(2*x[1], x[2]; rtol = 1e-1, atol = 0.002), zip(cell_kinetic_energy, kR(fieldk, +, ueND)))
+    end
+
+    for uR in (VertexVelocityReconstructionPerot(mesh),)
+        field = uR(ueND)
+        @test all(x -> isapprox(x[1], x[2], rtol=5e-1, atol=1e-5), zip(vertex_Vec_field, field))
+        @test all(x -> isapprox(2*x[1], x[2], rtol=5e-1, atol=2e-5), zip(vertex_Vec_field, uR(field, +, ueND)))
+
+        for kR in (VertexKineticEnergyVelRecon(uR),)
+            fieldk = kR(ueND)
+            @test all(x -> isapprox(x[1], x[2], rtol = 5.3e-1, atol= 1e-5), zip(vertex_kinetic_energy, fieldk))
+            @test all(x -> isapprox(2*x[1], x[2], rtol = 5.3e-1, atol = 2e-5), zip(vertex_kinetic_energy, kR(fieldk, +, ueND)))
+        end
     end
 
 end

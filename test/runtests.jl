@@ -1,4 +1,4 @@
-using TensorsLite, TensorsLiteGeometry, ImmutableVectors
+using TensorsLite, TensorsLiteGeometry, ImmutableVectors, LinearAlgebra
 using NCDatasets
 using VoronoiMeshes
 using VoronoiOperators

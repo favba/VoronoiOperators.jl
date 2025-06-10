@@ -19,6 +19,7 @@ export CellBoxFilter
 export TangentialVelocityReconstruction, TangentialVelocityReconstructionThuburn, TangentialVelocityReconstructionPeixoto, TangentialVelocityReconstructionVelRecon
 
 include("utils.jl")
+include("lsq_utils.jl")
 
 abstract type VoronoiOperator end
 abstract type LinearVoronoiOperator <: VoronoiOperator end

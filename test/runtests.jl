@@ -6,7 +6,7 @@ using Test
 
 const mesh_iso = VoronoiMesh("mesh.nc")
 const mesh_distorted = VoronoiMesh("mesh_distorted.nc")
-const mesh_spherical = VoronoiMesh("spherical_grid_500km.nc")
+const mesh_spherical = VoronoiMesh("x1.2562.grid.nc")
 
 const ncells = mesh_iso.cells.n
 const nvertex = mesh_iso.vertices.n
@@ -255,13 +255,13 @@ const vertex_kinetic_energy = (vertex_Vec_field .⋅ vertex_Vec_field) ./ 2
 
     for uR in (VertexVelocityReconstructionPerot(mesh),)
         field = uR(ueND)
-        @test all(x -> isapprox(x[1], x[2], rtol=5e-1, atol=1e-5), zip(vertex_Vec_field, field))
-        @test all(x -> isapprox(2*x[1], x[2], rtol=5e-1, atol=2e-5), zip(vertex_Vec_field, uR(field, +, ueND)))
+        @test all(x -> isapprox(x[1], x[2], rtol=2e-1, atol=1e-5), zip(vertex_Vec_field, field))
+        @test all(x -> isapprox(2*x[1], x[2], rtol=2e-1, atol=2e-5), zip(vertex_Vec_field, uR(field, +, ueND)))
 
         for kR in (VertexKineticEnergyVelRecon(uR),)
             fieldk = kR(ueND)
-            @test all(x -> isapprox(x[1], x[2], rtol = 5.3e-1, atol= 1e-5), zip(vertex_kinetic_energy, fieldk))
-            @test all(x -> isapprox(2*x[1], x[2], rtol = 5.3e-1, atol = 2e-5), zip(vertex_kinetic_energy, kR(fieldk, +, ueND)))
+            @test all(x -> isapprox(x[1], x[2], rtol = 3.3e-1, atol= 1e-5), zip(vertex_kinetic_energy, fieldk))
+            @test all(x -> isapprox(2*x[1], x[2], rtol = 3.3e-1, atol = 2e-5), zip(vertex_kinetic_energy, kR(fieldk, +, ueND)))
         end
     end
 

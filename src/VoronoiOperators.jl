@@ -7,6 +7,7 @@ import SIMD as sd
 
 export VertexToEdgeTransformation, VertexToEdgeMean, VertexToEdgeInterpolation, VertexToEdgePiecewise, VertexToEdgeArea
 export EdgeToCellTransformation, EdgeToCellRingler, EdgeToCellArea, EdgeToCellLSq2, EdgeToCellLSq3
+export VertexToCellTransformation, VertexToCellArea, VertexToCellLSq2, VertexToCellLSq3
 export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric
 export VecCellToEdgeTransformation
 export VecCellToEdgeMean
@@ -65,6 +66,7 @@ end
 
 include("node_transformations.jl")
 include("edge_to_cell_transformations.jl")
+include("vertex_to_cell_transformations.jl")
 include("cell_vector_to_edge_transformations.jl")
 include("cell_velocity_reconstruction.jl")
 include("vertex_velocity_reconstruction.jl")

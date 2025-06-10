@@ -144,6 +144,34 @@ end
      end
 end
 
+@testset "Vertex to Cell Transformations" begin
+    vertex_const_field1D = ones(nvertex)
+    vertex_const_field2D = ones(10, nvertex)
+    vertex_const_field3D = ones(10, nvertex, 2)
+
+    for mesh in (mesh_iso, mesh_distorted)
+        for v2c in (VertexToCellArea(mesh), VertexToCellLSq2(mesh), VertexToCellLSq3(mesh))
+            for field in (vertex_const_field1D, vertex_const_field2D, vertex_const_field3D)
+                @test all(isapprox(1), v2c(field))
+                v_field = v2c(field)
+                @test all(isapprox(2), v2c(v_field, +, field))
+            end
+        end
+    end
+
+    vertex_const_field1D = ones(nvertex_s)
+
+    mesh = mesh_spherical
+
+    for v2c in (VertexToCellArea(mesh), VertexToCellLSq2(mesh), VertexToCellLSq3(mesh))
+        for field in (vertex_const_field1D, )
+            @test all(isapprox(1), v2c(field))
+            v_field = v2c(field)
+            @test all(isapprox(2), v2c(v_field, +, field))
+        end
+    end
+end
+
 const axis = normalize(mesh_spherical.cells.position[20])
 const cell_Vec_field = axis .× mesh_spherical.cells.position
 const edge_Vec_field = (axis .× mesh_spherical.edges.position) .⋅ mesh_spherical.edges.normal

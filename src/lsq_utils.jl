@@ -1,5 +1,5 @@
 @inline function compute_weights_lsq2(bpos::VecND{TF}, elements_pos, 𝐢::Vec, 𝐣::Vec) where {TF}
-
+    @inbounds begin
     nElem = length(elements_pos)
 
     M = Matrix{TF}(undef, nElem, 3)
@@ -13,14 +13,17 @@
     end
 
     MpM = cholesky!(Hermitian(M'*M))
+    P = LinearAlgebra.inv!(MpM)*M'
 
-    wvec = vec((LinearAlgebra.inv!(MpM)*M')[1,:])
+    N = max_length(elements_pos)
+    wvec = map(x -> @inbounds(P[1, x]), ImmutableVector{N}(Base.OneTo(nElem)))
+    end #inbounds
 
     return wvec
 end
 
 @inline function compute_weights_lsq3(bpos::VecND{TF}, elements_pos, 𝐢::Vec, 𝐣::Vec) where {TF}
-
+    @inbounds begin
     nElem = length(elements_pos)
 
     M = Matrix{TF}(undef, nElem, 6)
@@ -53,7 +56,10 @@ end
         cn = cond(MpM)
     end
 
-    wvec = vec((LinearAlgebra.inv!(cholesky!(MpM))*M')[1,:])
+    P = LinearAlgebra.inv!(cholesky!(MpM))*M'
+    N = max_length(elements_pos)
+    wvec = map(x -> @inbounds(P[1, x]), ImmutableVector{N}(Base.OneTo(nElem)))
+    end #inbounds
 
     return wvec
 end
@@ -62,7 +68,7 @@ end
 @inline _data(w::ImVecArray) = w.data
 
 @inline _pad_with_zero(::Type{ImmutableVector{NE, TF}}, wvec) where {NE, TF} = padwith(ImmutableVector{NE, TF}(wvec), zero(TF)).data
-@inline _pad_with_zero(::Type{NTuple{N, TF}}, wvec) where {N, TF} = wvec
+@inline _pad_with_zero(::Type{NTuple{N, TF}}, wvec) where {N, TF} = ntuple(i->@inbounds(wvec[i]), Val{N}())
 
 function compute_weights_lsq_periodic!(w::AbstractVector{TV}, basePos, elemPos, elemOnBase, xp::Number, yp::Number, lsq_func::F) where {TV, F}
 
@@ -129,3 +135,164 @@ function compute_weights_lsq(basePos, elemPos, elemOnBase, R::Number, lsq_func::
     return compute_weights_lsq_spherical!(w, basePos, elemPos, elemOnBase, R, lsq_func)
 end
 
+@inline function compute_weights_vec_lsq1(elements_normal, 𝐢::Vec, 𝐣::Vec)
+    @inbounds begin
+    nElem = length(elements_normal)
+
+    TF = nonzero_eltype(eltype(elements_normal))
+    M = Matrix{TF}(undef, nElem, 2)
+
+    for eli in Base.OneTo(nElem)
+        normal = elements_normal[eli]
+        M[eli, 1] = normal ⋅ 𝐢
+        M[eli, 2] = normal ⋅ 𝐣
+    end
+
+    MpM = cholesky!(Hermitian(M'*M))
+
+    P = LinearAlgebra.inv!(MpM)*M'
+    N = max_length(elements_normal)
+    wvec = map(x -> (@inbounds(P[1, x])*𝐢 + @inbounds(P[2, x])*𝐣), ImmutableVector{N}(Base.OneTo(nElem)))
+    end #inbounds
+
+    return wvec
+end
+
+function compute_weights_vec_lsq1_periodic!(w::AbstractVector{TV}, elemOnBase, elemNormals) where {TV}
+
+    wdata = _data(w)
+
+    @parallel for b in eachindex(elemOnBase)
+        @inbounds begin
+
+            elements_normals = map(@inline(i -> @inbounds(elemNormals[i])), elemOnBase[b])
+
+            @inline wvec = compute_weights_vec_lsq1(elements_normals, 𝐢, 𝐣)
+
+            wdata[b] = _pad_with_zero(TV, wvec)
+        end
+    end
+
+    return w
+end
+
+function compute_weights_vec_lsq1_spherical!(w::AbstractVector{TV}, basePos, elemOnBase, elemNormals, R::Number) where {TV}
+
+    wdata = _data(w)
+
+    @parallel for b in eachindex(basePos)
+        @inbounds begin
+
+            bpos_n = basePos[b] / R
+
+            elements_normal_proj = map(elemOnBase[b]) do i
+                @inline
+                _n = @inbounds(elemNormals[i])
+                return normalize(_n - (_n ⋅ bpos_n)*bpos_n)
+            end
+
+            east_v = eastward_vector(bpos_n)
+            north_v = bpos_n × east_v
+            @inline wvec = compute_weights_vec_lsq1(elements_normal_proj, east_v, north_v)
+
+            wdata[b] = _pad_with_zero(TV, wvec)
+        end
+    end
+
+    return w
+end
+
+@inline function compute_weights_vec_lsq2(bpos::VecND{TF}, elements_pos, elements_normal, 𝐢::Vec, 𝐣::Vec) where {TF}
+    @inbounds begin
+    nElem = length(elements_normal)
+
+    M = Matrix{TF}(undef, nElem, 6)
+
+    for eli in Base.OneTo(nElem)
+        normal = elements_normal[eli]
+        nx = normal ⋅ 𝐢
+        ny = normal ⋅ 𝐣
+        dp = elements_pos[eli] - bpos
+        dpx = dp ⋅ 𝐢
+        dpy = dp ⋅ 𝐣
+        M[eli, 1] = nx
+        M[eli, 2] = ny
+        M[eli, 3] = nx*dpx
+        M[eli, 4] = ny*dpx
+        M[eli, 5] = nx*dpy
+        M[eli, 6] = ny*dpy
+    end
+
+    MpM = Hermitian(M'*M)
+    cn = cond(MpM)
+    ii = 0
+    while cn > 5e6
+        ii += 1
+        for i in 3:6
+            MpM[i, i] += 1e-6
+        end
+        cn = cond(MpM)
+    end
+
+    P = LinearAlgebra.inv!(cholesky!(MpM))*M'
+
+    N = max_length(elements_normal)
+    wvec = map(x -> (@inbounds(P[1, x])*𝐢 + @inbounds(P[2, x])*𝐣), ImmutableVector{N}(Base.OneTo(nElem)))
+    end #inbounds
+
+    return wvec
+end
+
+function compute_weights_vec_lsq2_periodic!(w::AbstractVector{TV}, basePos, elemOnBase, elemPos, elemNormals, xp::Number, yp::Number) where {TV}
+
+    wdata = _data(w)
+
+    @parallel for b in eachindex(basePos)
+        @inbounds begin
+
+            bpos = basePos[b]
+
+            eob = elemOnBase[b]
+
+            elements = map(@inline(i -> closest(bpos, @inbounds(elemPos[i]), xp, yp)), eob)
+            elements_normal = map(@inline(i -> @inbounds(elemNormals[i])), eob)
+
+            @inline wvec = compute_weights_vec_lsq2(bpos, elements, elements_normal, 𝐢, 𝐣)
+
+            wdata[b] = _pad_with_zero(TV, wvec)
+        end
+    end
+
+    return w
+end
+
+function compute_weights_vec_lsq2_spherical!(w::AbstractVector{TV}, basePos, elemOnBase, elemPos, elemNormals, R::Number) where {TV}
+
+    wdata = _data(w)
+
+    @parallel for b in eachindex(basePos)
+        @inbounds begin
+
+            bpos_n = basePos[b] / R
+
+            eob = elemOnBase[b]
+
+            elements = map(@inline(i -> @inbounds(elemPos[i]) / R), eob)
+            elements_proj = project_points_to_tangent_plane(1, bpos_n, elements)
+
+            elements_normal_proj = map(eob) do i
+                @inline
+                _n = @inbounds(elemNormals[i])
+                return normalize(_n - (_n ⋅ bpos_n)*bpos_n)
+            end
+
+            east_v = eastward_vector(bpos_n)
+            north_v = bpos_n × east_v
+            @inline wvec = compute_weights_vec_lsq2(bpos_n, elements_proj, elements_normal_proj, east_v, north_v)
+
+            wdata[b] = _pad_with_zero(TV, wvec)
+        end
+    end
+
+    return w
+end

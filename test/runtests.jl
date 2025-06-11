@@ -215,7 +215,7 @@ const vertex_kinetic_energy = (vertex_Vec_field .⋅ vertex_Vec_field) ./ 2
                 end
             end
         end
-        for uR in (VertexVelocityReconstructionPerot(mesh),)
+        for uR in (VertexVelocityReconstructionPerot(mesh), VertexVelocityReconstructionLSq1(mesh), VertexVelocityReconstructionLSq2(mesh))
             for ueND in (ue1D, ue2D, ue3D)
                 @test all(isapprox(3.0𝐢 + 4.0𝐣), uR(ueND))
                 field = uR(ueND)
@@ -274,7 +274,7 @@ const vertex_kinetic_energy = (vertex_Vec_field .⋅ vertex_Vec_field) ./ 2
         @test all(x -> isapprox(2*x[1], x[2]; rtol = 1e-1, atol = 0.002), zip(cell_kinetic_energy, kR(fieldk, +, ueND)))
     end
 
-    for uR in (VertexVelocityReconstructionPerot(mesh),)
+    for uR in (VertexVelocityReconstructionPerot(mesh), VertexVelocityReconstructionLSq1(mesh), VertexVelocityReconstructionLSq2(mesh))
         field = uR(ueND)
         @test all(x -> isapprox(x[1], x[2], rtol=2e-1, atol=1e-5), zip(vertex_Vec_field, field))
         @test all(x -> isapprox(2*x[1], x[2], rtol=2e-1, atol=2e-5), zip(vertex_Vec_field, uR(field, +, ueND)))

@@ -78,3 +78,52 @@ VertexVelocityReconstructionPerot(mesh::AbstractVoronoiMesh) =
         mesh.vertices.edges,
         compute_weights_perot_vertex_velocity_reconstruction(mesh.cells, mesh.vertices)
     )
+
+struct VertexVelocityReconstructionLSq1{TI, TF, TZ} <: VertexVelocityReconstruction{TI, TF, TZ}
+    n::Int
+    indices::Vector{NTuple{3, TI}}
+    weights::Vector{NTuple{3, Vec{Union{TF, TZ}, 1, TF, TF, TZ}}}
+end
+
+function VertexVelocityReconstructionLSq1(vertices::Vertices{false, NE, TI, TF}, edges::Edges) where {NE, TI, TF}
+    edgesOnVertex = vertices.edges
+    weights = Vector{NTuple{3, Vec2Dxy{TF}}}(undef, vertices.n)
+    compute_weights_vec_lsq1_periodic!(weights, edgesOnVertex, edges.normal)
+    return VertexVelocityReconstructionLSq1(edges.n, edgesOnVertex, weights)
+end
+
+function VertexVelocityReconstructionLSq1(vertices::Vertices{true, NE, TI, TF}, edges::Edges) where {NE, TI, TF}
+    edgesOnVertex = vertices.edges
+    weights =Vector{NTuple{3, Vec3D{TF}}}(undef, vertices.n)
+    compute_weights_vec_lsq1_spherical!(weights, vertices.position, edgesOnVertex, edges.normal, vertices.sphere_radius)
+    return VertexVelocityReconstructionLSq1(edges.n, edgesOnVertex, weights)
+end
+
+function VertexVelocityReconstructionLSq1(mesh::AbstractVoronoiMesh)
+    VertexVelocityReconstructionLSq1(mesh.vertices, mesh.edges)
+end
+
+struct VertexVelocityReconstructionLSq2{TI, TF, TZ} <: VertexVelocityReconstruction{TI, TF, TZ}
+    n::Int
+    indices::Vector{NTuple{3, TI}}
+    weights::Vector{NTuple{3, Vec{Union{TF, TZ}, 1, TF, TF, TZ}}}
+end
+
+function VertexVelocityReconstructionLSq2(vertices::Vertices{false, NE, TI, TF}, edges::Edges) where {NE, TI, TF}
+    edgesOnVertex = vertices.edges
+    weights = Vector{NTuple{3, Vec2Dxy{TF}}}(undef, vertices.n)
+    compute_weights_vec_lsq2_periodic!(weights, vertices.position, edgesOnVertex, edges.position, edges.normal, vertices.x_period, vertices.y_period)
+    return VertexVelocityReconstructionLSq2(edges.n, edgesOnVertex, weights)
+end
+
+function VertexVelocityReconstructionLSq2(vertices::Vertices{true, NE, TI, TF}, edges::Edges) where {NE, TI, TF}
+    edgesOnVertex = vertices.edges
+    weights = Vector{NTuple{3, Vec3D{TF}}}(undef, vertices.n)
+    compute_weights_vec_lsq2_spherical!(weights, vertices.position, edgesOnVertex, edges.position, edges.normal, vertices.sphere_radius)
+    return VertexVelocityReconstructionLSq2(edges.n, edgesOnVertex, weights)
+end
+
+function VertexVelocityReconstructionLSq2(mesh::AbstractVoronoiMesh)
+    VertexVelocityReconstructionLSq2(mesh.vertices, mesh.edges)
+end
+

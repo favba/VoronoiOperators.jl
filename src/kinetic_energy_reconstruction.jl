@@ -192,27 +192,29 @@ struct CellKineticEnergyVelRecon{N_MAX, TI, TF, TR <: CellVelocityReconstruction
     uR::TR
 end
 
+struct VertexKineticEnergyVelRecon{TI, TF, TR <: VertexVelocityReconstruction{TI, TF}} <: VertexKineticEnergyReconstruction{TI, TF}
+    uR::TR
+end
+
+const KineticEnergyVelRecon = Union{<:CellKineticEnergyVelRecon, <:VertexKineticEnergyVelRecon}
+
 @inline kinetic_energy(x) = 0.5 * (x ⋅ x) 
 @inline kinetic_energy(::Any, x) = 0.5 * (x ⋅ x)
 
-n_input(o::CellKineticEnergyVelRecon) = n_input(o.uR)
-n_output(o::CellKineticEnergyVelRecon) = n_output(o.uR)
-out_eltype(Vop::CellKineticEnergyVelRecon, in_field, op::F = Base.identity) where {F} = Base.promote_op(kinetic_energy, out_eltype(Vop.uR, in_field, op))
+n_input(o::KineticEnergyVelRecon) = n_input(o.uR)
+n_output(o::KineticEnergyVelRecon) = n_output(o.uR)
+out_eltype(Vop::KineticEnergyVelRecon, in_field, op::F = Base.identity) where {F} = Base.promote_op(kinetic_energy, out_eltype(Vop.uR, in_field, op))
 
-const CellKineticEnergyPerot{N_MAX, TI, TF, TZ} = CellKineticEnergyVelRecon{N_MAX, TI, TF, CellVelocityReconstructionPerot{N_MAX, TI, TF, TZ}}
-
-CellKineticEnergyPerot(mesh::AbstractVoronoiMesh) = CellKineticEnergyVelRecon(CellVelocityReconstructionPerot(mesh))
-
-function (kc::CellKineticEnergyVelRecon)(c_field::AbstractArray, e_field::AbstractArray, op::F = Base.identity) where {F}
+function (kc::KineticEnergyVelRecon)(c_field::AbstractArray, e_field::AbstractArray, op::F = Base.identity) where {F}
     is_proper_size(e_field, n_input(kc)) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
-    is_proper_size(c_field, n_output(kc)) || throw(DimensionMismatch("Output array doesn't seem to be a cell field"))
+    is_proper_size(c_field, n_output(kc)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(kc)) field"))
 
     kc.uR(c_field, kinetic_energy, e_field, op)
 
     return c_field
 end
 
-function (kc::CellKineticEnergyVelRecon)(e_field::AbstractArray, op::F = Base.identity) where {F}
+function (kc::KineticEnergyVelRecon)(e_field::AbstractArray, op::F = Base.identity) where {F}
     is_proper_size(e_field, n_input(kc)) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
     s = construct_new_node_index(size(e_field)..., n_output(kc))
     c_field = my_similar(e_field, out_eltype(kc, e_field, op), s)
@@ -225,9 +227,9 @@ end
 
 @inline (O::OpKineticEnergy)(x, y) = O.op(x, kinetic_energy(y))
 
-function (kc::CellKineticEnergyVelRecon)(c_field::AbstractArray, op::F, e_field::AbstractArray, op2::F2 = Base.identity) where {F <: Function, F2}
+function (kc::KineticEnergyVelRecon)(c_field::AbstractArray, op::F, e_field::AbstractArray, op2::F2 = Base.identity) where {F <: Function, F2}
     is_proper_size(e_field, n_input(kc)) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
-    is_proper_size(c_field, n_output(kc)) || throw(DimensionMismatch("Output array doesn't seem to be a cell field"))
+    is_proper_size(c_field, n_output(kc)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(kc)) field"))
 
     f = OpKineticEnergy(op)
     kc.uR(c_field, f, e_field, op2)
@@ -235,42 +237,13 @@ function (kc::CellKineticEnergyVelRecon)(c_field::AbstractArray, op::F, e_field:
     return c_field
 end
 
-struct VertexKineticEnergyVelRecon{TI, TF, TR <: VertexVelocityReconstruction{TI, TF}} <: VertexKineticEnergyReconstruction{TI, TF}
-    uR::TR
-end
-n_input(o::VertexKineticEnergyVelRecon) = n_input(o.uR)
-n_output(o::VertexKineticEnergyVelRecon) = n_output(o.uR)
-out_eltype(Vop::VertexKineticEnergyVelRecon, in_field, op::F = Base.identity) where {F} = Base.promote_op(kinetic_energy, Base.promote_op(*, eltype(eltype(Vop.uR.weights)), Base.promote_op(op, eltype(in_field))))
+const CellKineticEnergyPerot{N_MAX, TI, TF, TZ} = CellKineticEnergyVelRecon{N_MAX, TI, TF, CellVelocityReconstructionPerot{N_MAX, TI, TF, TZ}}
+
+CellKineticEnergyPerot(mesh::AbstractVoronoiMesh) = CellKineticEnergyVelRecon(CellVelocityReconstructionPerot(mesh))
 
 const VertexKineticEnergyPerot{TI, TF, TZ} = VertexKineticEnergyVelRecon{TI, TF, VertexVelocityReconstructionPerot{TI, TF, TZ}}
 
 VertexKineticEnergyPerot(mesh::AbstractVoronoiMesh) = VertexKineticEnergyVelRecon(VertexVelocityReconstructionPerot(mesh))
-
-function (kv::VertexKineticEnergyVelRecon)(v_field::AbstractArray, e_field::AbstractArray, op::F = Base.identity) where {F}
-    is_proper_size(e_field, n_input(kv)) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
-    is_proper_size(v_field, n_output(kv)) || throw(DimensionMismatch("Output array doesn't seem to be a vertex field"))
-
-    kv.uR(v_field, kinetic_energy, e_field, op)
-
-    return v_field
-end
-
-function (kv::VertexKineticEnergyVelRecon)(e_field::AbstractArray, op::F = Base.identity) where {F}
-    is_proper_size(e_field, n_input(kv)) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
-    s = construct_new_node_index(size(e_field)..., n_output(kv))
-    v_field = my_similar(e_field, out_eltype(kv, e_field, op), s)
-    return kv(v_field, e_field, op)
-end
-
-function (kv::VertexKineticEnergyVelRecon)(v_field::AbstractArray, op::F, e_field::AbstractArray, op2::F2 = Base.identity) where {F <: Function, F2}
-    is_proper_size(e_field, n_input(kv)) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
-    is_proper_size(v_field, n_output(kv)) || throw(DimensionMismatch("Output array doesn't seem to be a vertex field"))
-
-    f = OpKineticEnergy(op)
-    kv.uR(v_field, f, e_field, op2)
-
-    return v_field
-end
 
 const CellKineticEnergyPerotWeighted{N_MAX, TI, TF, TZ} = CellKineticEnergyVertexWeighted{N_MAX, TI, TF,
                                                                              VertexKineticEnergyPerot{TI, TF, TZ},

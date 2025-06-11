@@ -131,11 +131,11 @@ end
 
 @inline (L::Combination)(x, y) = muladd(L.a, (x - y), y)
 
-function (ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, u::AbstractArray, op::F = Base.identity) where F
+function (ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, kv::AbstractArray, u::AbstractArray, op::F = Base.identity) where F
     is_proper_size(c_field, n_output(ckm)) || throw(DimensionMismatch("Output array doesn't seem to be a cell field"))
+    is_proper_size(kv, n_output(ckm.vertexReconstruction)) || throw(DimensionMismatch("Intermediary array doesn't seem to be a vertex field"))
     is_proper_size(u, n_input(ckm)) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
 
-    kv = get_proper_kv(ckm, u)
     ckm.vertexReconstruction(kv, u, op)
     ckm.cellReconstruction(c_field, u, op)
 
@@ -145,6 +145,8 @@ function (ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, u::Abstr
 
     return c_field
 end
+
+(ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, u::AbstractArray, op::F = Base.identity) where F = ckm(c_field, get_proper_kv(ckm,u), u, op)
 
 function (kc::CellKineticEnergyVertexWeighted)(e_field::AbstractArray, op::F = Base.identity) where {F}
     is_proper_size(e_field, n_input(kc)) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
@@ -160,11 +162,11 @@ end
 
 @inline (O::OpAtimes)(x, y) = O.op(x, O.a * y)
 
-function (ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, op::F, u::AbstractArray, op2::F2 = Base.identity) where {F <: Union{typeof(Base.:+), typeof(Base.:-)}, F2}
+function (ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, kv::AbstractArray, op::F, u::AbstractArray, op2::F2 = Base.identity) where {F <: Union{typeof(Base.:+), typeof(Base.:-)}, F2}
     is_proper_size(c_field, n_output(ckm)) || throw(DimensionMismatch("Output array doesn't seem to be a cell field"))
+    is_proper_size(kv, n_output(ckm.vertexReconstruction)) || throw(DimensionMismatch("Intermediary array doesn't seem to be a vertex field"))
     is_proper_size(u, n_input(ckm)) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
 
-    kv = get_proper_kv(ckm, u)
     ckm.vertexReconstruction(kv, u, op2)
 
     f1 = OpAtimes(op, ckm.alpha)
@@ -177,6 +179,9 @@ function (ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, op::F, u
 
     return c_field
 end
+
+(ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, op::F, u::AbstractArray, op2::F2 = Base.identity) where {F <: Union{typeof(Base.:+), typeof(Base.:-)}, F2} =
+    ckm(c_field, get_proper_kv(ckm, u), op, u, op2)
 
 const CellKineticEnergyMPAS{N_MAX, TI, TF} = CellKineticEnergyVertexWeighted{N_MAX, TI, TF,
                                                                              VertexKineticEnergyGassmann{TI, TF},

@@ -8,7 +8,7 @@ struct VertexToEdgeMean{TI} <: VertexToEdgeTransformation
     indices::Vector{NTuple{2, TI}}
 end
 
-out_eltype(::VertexToEdgeMean, in_file::AbstractArray{T}, op::F = Base.identity) where {T, F <: Function} = Base.promote_op(/, Base.promote_op(op, T), Int)
+out_eltype(::VertexToEdgeMean, in_file::AbstractArray{T}, op::F = Base.identity) where {T, F} = Base.promote_op(/, Base.promote_op(op, T), Int)
 
 transformation_function!(out_field::AbstractArray, in_field::AbstractArray, Vop::VertexToEdgeMean, op::F) where {F <: Function} = to_mean_transformation!(out_field, in_field, Vop.indices, op)
 
@@ -178,7 +178,7 @@ struct CellToEdgeMean{TI} <: CellToEdgeTransformation
     indices::Vector{NTuple{2, TI}}
 end
 
-out_eltype(::CellToEdgeMean, in_file::AbstractArray{T}, op::F = Base.identity) where {T, F <: Function} = Base.promote_op(/, Base.promote_op(op, T), Int)
+out_eltype(::CellToEdgeMean, in_file::AbstractArray{T}, op::F = Base.identity) where {T, F} = Base.promote_op(/, Base.promote_op(op, T), Int)
 
 transformation_function!(out_field::AbstractArray, in_field::AbstractArray, Vop::CellToEdgeMean, op::F = Base.identity) where {F <: Function} = to_mean_transformation!(out_field, in_field, Vop.indices, op)
 

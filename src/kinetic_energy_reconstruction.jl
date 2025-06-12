@@ -15,13 +15,6 @@ function (Vop::KineticEnergyReconstruction)(out_field::AbstractArray, in_field::
     return out_field
 end
 
-function (Vop::KineticEnergyReconstruction)(in_field::AbstractArray, op::F = Base.identity) where {F}
-    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
-    s = construct_new_node_index(size(in_field)..., n_output(Vop))
-    out_field = my_similar(in_field, out_eltype(Vop, in_field, op), s)
-    return Vop(out_field, in_field, op)
-end
-
 function (Vop::KineticEnergyReconstruction)(out_field::AbstractArray, op::F, in_field::AbstractArray, op2::F2 = Base.identity) where {F <: Function, F2}
     is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
     is_proper_size(out_field, n_output(Vop)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(Vop)) field"))
@@ -148,13 +141,6 @@ end
 
 (ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, u::AbstractArray, op::F = Base.identity) where F = ckm(c_field, get_proper_kv(ckm,u), u, op)
 
-function (kc::CellKineticEnergyVertexWeighted)(e_field::AbstractArray, op::F = Base.identity) where {F}
-    is_proper_size(e_field, n_input(kc)) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
-    s = construct_new_node_index(size(e_field)..., n_output(kc))
-    c_field = my_similar(e_field, out_eltype(kc.cellReconstruction, e_field, op), s)
-    return kc(c_field, e_field, op)
-end
-
 struct OpAtimes{F, T} <: Function
     op::F
     a::T
@@ -217,13 +203,6 @@ function (kc::KineticEnergyVelRecon)(c_field::AbstractArray, e_field::AbstractAr
     kc.uR(c_field, kinetic_energy, e_field, op)
 
     return c_field
-end
-
-function (kc::KineticEnergyVelRecon)(e_field::AbstractArray, op::F = Base.identity) where {F}
-    is_proper_size(e_field, n_input(kc)) || throw(DimensionMismatch("Input array doesn't seem to be an edge field"))
-    s = construct_new_node_index(size(e_field)..., n_output(kc))
-    c_field = my_similar(e_field, out_eltype(kc, e_field, op), s)
-    return kc(c_field, e_field)
 end
 
 struct OpKineticEnergy{F} <: Function

@@ -28,8 +28,16 @@ abstract type NonLinearVoronoiOperator <: VoronoiOperator end
 
 n_input(a::VoronoiOperator) = a.n
 n_output(a::VoronoiOperator) = length(a.indices)
-out_eltype(Vop::LinearVoronoiOperator, in_field, op::F = Base.identity) where {F <: Function} = Base.promote_op(*, eltype(eltype(Vop.weights)), Base.promote_op(op, eltype(in_field)))
+out_eltype(Vop::LinearVoronoiOperator, in_field, op::F = Base.identity) where {F} = Base.promote_op(*, eltype(eltype(Vop.weights)), Base.promote_op(op, eltype(in_field)))
 
+my_similar(in_field, T, s) = similar(in_field, T, s)
+my_similar(in_field, ::Type{T}, s) where {T <: Vec2Dxy} = VecArray(x = similar(in_field, nonzero_eltype(T), s), y = similar(in_field, nonzero_eltype(T), s))
+my_similar(in_field, ::Type{T}, s) where {T <: Vec3D} = VecArray(x = similar(in_field, nonzero_eltype(T), s), y = similar(in_field, nonzero_eltype(T), s), z = similar(in_field, nonzero_eltype(T), s))
+
+function create_output_array(Vop::VoronoiOperator, in_field, op::F = Base.identity) where {F}
+    s = construct_new_node_index(size(in_field)..., n_output(Vop))
+    return my_similar(in_field, out_eltype(Vop, in_field, op), s)
+end
 
 transformation_function!(out_field::AbstractArray, in_field::AbstractArray, Vop::VoronoiOperator, op::F = Base.identity) where {F <: Function} = weighted_sum_transformation!(out_field, in_field, Vop.weights, Vop.indices, op)
 
@@ -53,14 +61,9 @@ function (Vop::LinearVoronoiOperator)(out_field::AbstractArray, op_out::F, in_fi
     return out_field
 end
 
-my_similar(in_field, T, s) = similar(in_field, T, s)
-my_similar(in_field, ::Type{T}, s) where {T <: Vec2Dxy} = VecArray(x = similar(in_field, nonzero_eltype(T), s), y = similar(in_field, nonzero_eltype(T), s))
-my_similar(in_field, ::Type{T}, s) where {T <: Vec3D} = VecArray(x = similar(in_field, nonzero_eltype(T), s), y = similar(in_field, nonzero_eltype(T), s), z = similar(in_field, nonzero_eltype(T), s))
-
-function (Vop::LinearVoronoiOperator)(in_field::AbstractArray, op::F = Base.identity) where {F <: Function}
+function (Vop::VoronoiOperator)(in_field::AbstractArray, op::F = Base.identity) where {F <: Function}
     is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
-    s = construct_new_node_index(size(in_field)..., n_output(Vop))
-    out_field = my_similar(in_field, out_eltype(Vop, in_field, op), s)
+    out_field = create_output_array(Vop, in_field, op)
     return Vop(out_field, in_field, op)
 end
 

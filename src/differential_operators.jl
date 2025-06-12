@@ -8,6 +8,7 @@ end
 
 name_input(::GradientAtEdge) = "cell"
 name_output(::GradientAtEdge) = "edge"
+out_eltype(Vop::GradientAtEdge, in_field, op::F = Base.identity) where {F} = Base.promote_op(*, eltype(eltype(Vop.dc)), Base.promote_op(op, eltype(in_field)))
 
 GradientAtEdge(mesh::AbstractVoronoiMesh) = GradientAtEdge(mesh.cells.n, mesh.edges.lengthDual, mesh.edges.cells)
 
@@ -233,14 +234,9 @@ function (Vop::GradientAtEdge)(out_field::AbstractArray, op_out::F, in_field::Ab
     return out_field
 end
 
-function (Vop::GradientAtEdge)(in_field::AbstractArray, op::F = Base.identity) where {F <: Function}
-    is_proper_size(in_field, n_input(Vop)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(Vop)) field"))
-    s = construct_new_node_index(size(in_field)..., n_output(Vop))
-    out_field = my_similar(in_field, Base.promote_op(*, eltype(eltype(Vop.dc)), Base.promote_op(op, eltype(in_field))), s)
-    return Vop(out_field, in_field, op)
-end
+abstract type CellDiv{TI, TF} <: DifferentialOperator end
 
-struct DivAtCell{N_MAX, TI, TF} <: DifferentialOperator
+struct DivAtCell{N_MAX, TI, TF} <: CellDiv{TI, TF}
     n::Int
     indices::ImVecArray{N_MAX, TI, 1}
     weights::Vector{ImmutableVector{N_MAX, TF}}

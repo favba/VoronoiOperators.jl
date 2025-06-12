@@ -355,6 +355,16 @@ end
             field .= 1
             @test all(x -> isapprox(x, 1.0), Div(field, +, ueND))
         end
+
+        c_field1D = 3 .* ones(ncells)
+        c_field2D = 3 .* ones(10, ncells)
+        c_field3D = 3 .* ones(10, ncells, 2)
+        DivRU = DivCellScalarU(mesh)
+
+        for (ueND, cf) in ((ue1D, c_field1D), (ue2D, c_field2D), (ue3D, c_field3D))
+            atol = 1.0e-8 * norm(v) # isapprox(0.0) is tricky to evaluate
+            @test all(x -> isapprox(x, 0.0; atol = atol), DivRU(cf, ueND))
+        end
     end
 end
 

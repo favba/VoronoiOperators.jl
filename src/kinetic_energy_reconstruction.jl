@@ -84,9 +84,6 @@ struct CellKineticEnergyVertexWeighted{N_MAX, TI, TF,
     cellReconstruction::TCR
     vertexToCell::TVC
     alpha::TF
-    kv1d::Base.RefValue{Vector{TF}}
-    kv2d::Base.RefValue{Matrix{TF}}
-    kv3d::Base.RefValue{Array{TF, 3}}
 end
 
 n_input(o::CellKineticEnergyVertexWeighted) = n_input(o.cellReconstruction)
@@ -94,28 +91,7 @@ n_output(o::CellKineticEnergyVertexWeighted) = n_output(o.cellReconstruction)
 out_eltype(o::CellKineticEnergyVertexWeighted, in_field, op::F = Base.identity) where {F} = out_eltype(o.cellReconstruction, in_field, op)
 
 function CellKineticEnergyVertexWeighted(vertexReconstruction::VertexKineticEnergyReconstruction{TI,TF}, cellReconstruction, vertexToCell, alpha = 1 - 0.375) where {TI, TF}
-    return CellKineticEnergyVertexWeighted(vertexReconstruction, cellReconstruction, vertexToCell, alpha, Ref{Vector{TF}}(), Ref{Matrix{TF}}(), Ref{Array{TF, 3}}())
-end
-
-function get_proper_kv(ckm::CellKineticEnergyVertexWeighted, ::Vector{TF}) where {TF}
-    if !isassigned(ckm.kv1d)
-        ckm.kv1d[] = Vector{TF}(undef, n_output(ckm.vertexReconstruction))
-    end
-    return ckm.kv1d[]
-end
-
-function get_proper_kv(ckm::CellKineticEnergyVertexWeighted, u::Matrix{TF}) where {TF}
-    if !isassigned(ckm.kv2d)
-        ckm.kv2d[] = Matrix{TF}(undef, size(u, 1), n_output(ckm.vertexReconstruction))
-    end
-    return ckm.kv2d[]
-end
-
-function get_proper_kv(ckm::CellKineticEnergyVertexWeighted, u::Array{TF, 3}) where {TF}
-    if !isassigned(ckm.kv3d)
-        ckm.kv3d[] = Array{TF, 3}(undef, size(u, 1), n_output(ckm.vertexReconstruction), size(u, 3))
-    end
-    return ckm.kv3d[]
+    return CellKineticEnergyVertexWeighted(vertexReconstruction, cellReconstruction, vertexToCell, alpha)
 end
 
 struct Combination{T} <: Function
@@ -139,7 +115,7 @@ function (ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, kv::Abst
     return c_field
 end
 
-(ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, u::AbstractArray, op::F = Base.identity) where F = ckm(c_field, get_proper_kv(ckm,u), u, op)
+(ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, u::AbstractArray, op::F = Base.identity) where F = ckm(c_field, create_output_array(ckm.vertexReconstruction, u, op), u, op)
 
 struct OpAtimes{F, T} <: Function
     op::F
@@ -167,7 +143,7 @@ function (ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, kv::Abst
 end
 
 (ckm::CellKineticEnergyVertexWeighted)(c_field::AbstractArray, op::F, u::AbstractArray, op2::F2 = Base.identity) where {F <: Union{typeof(Base.:+), typeof(Base.:-)}, F2} =
-    ckm(c_field, get_proper_kv(ckm, u), op, u, op2)
+    ckm(c_field, create_output_array(ckm.vertexReconstruction, u, op2), op, u, op2)
 
 const CellKineticEnergyMPAS{N_MAX, TI, TF} = CellKineticEnergyVertexWeighted{N_MAX, TI, TF,
                                                                              VertexKineticEnergyGassmann{TI, TF},
@@ -175,8 +151,7 @@ const CellKineticEnergyMPAS{N_MAX, TI, TF} = CellKineticEnergyVertexWeighted{N_M
                                                                              VertexToCellArea{N_MAX, TI, TF}}
 
 function CellKineticEnergyMPAS(mesh::AbstractVoronoiMesh, alpha = 1 - 0.375)
-    T = float_type(typeof(mesh.cells))
-    return CellKineticEnergyVertexWeighted(VertexKineticEnergyGassmann(mesh), CellKineticEnergyRingler(mesh), VertexToCellArea(mesh), alpha, Ref{Vector{T}}(), Ref{Matrix{T}}(), Ref{Array{T, 3}}())
+    return CellKineticEnergyVertexWeighted(VertexKineticEnergyGassmann(mesh), CellKineticEnergyRingler(mesh), VertexToCellArea(mesh), alpha)
 end
 
 struct CellKineticEnergyVelRecon{N_MAX, TI, TF, TR <: CellVelocityReconstruction{N_MAX, TI, TF}} <: CellKineticEnergyReconstruction{N_MAX, TI, TF}

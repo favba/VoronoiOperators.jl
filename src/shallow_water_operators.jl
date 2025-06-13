@@ -11,7 +11,7 @@ DivCellScalarU(mesh::AbstractVoronoiMesh) = DivCellScalarU(CellToEdgeMean(mesh),
 
 function (divrhou::DivCellScalarU)(out::AbstractArray, u_inter::AbstractArray, ρ::AbstractArray, u::AbstractArray)
     divrhou.cellToEdge(u_inter, ρ)
-    VoronoiMeshes.tmap!(u_inter, *, u_inter, u)
+    mytmap!(*, u_inter, u, u_inter)
     divrhou.div(out, u_inter)
 end
 

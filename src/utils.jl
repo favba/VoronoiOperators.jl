@@ -4,6 +4,13 @@ const IntOrVecRange = Union{Int, Int32, <:sd.VecRange}
 Base.@propagate_inbounds sd._pointer(arr::PtrArray, i, I) =
     pointer(arr, LinearIndices(arr)[i, I...])
 
+function mytmap!(func::F, output, var::Vararg) where {F <: Function}
+    @batch for i in eachindex(output)
+        @inbounds output[i] = @inline func(map(x -> @inbounds(x[i]), var)...)
+    end
+    return output
+end
+
 # @inline get_node_index(i::Integer) = i
 # @inline get_node_index(k::Integer, i::Integer) = i
 # @inline get_node_index(k::Integer, i::Integer, t::Integer) = i

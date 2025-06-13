@@ -1,5 +1,9 @@
 const IntOrVecRange = Union{Int, Int32, <:sd.VecRange}
 
+#This is piracy
+Base.@propagate_inbounds sd._pointer(arr::PtrArray, i, I) =
+    pointer(arr, LinearIndices(arr)[i, I...])
+
 # @inline get_node_index(i::Integer) = i
 # @inline get_node_index(k::Integer, i::Integer) = i
 # @inline get_node_index(k::Integer, i::Integer, t::Integer) = i
@@ -16,6 +20,8 @@ const IntOrVecRange = Union{Int, Int32, <:sd.VecRange}
 @inline is_proper_size(field::AbstractArray{<:Any, 3}, n::Integer) = size(field, 2) == n
 
 @inline simd_length(::Type{T}) where {T} = 64 ÷ sizeof(T)
+@inline simd_length(::Type{Vec3D{T}}) where {T} = 64 ÷ sizeof(T)
+@inline simd_length(::Type{Vec2Dxy{T}}) where {T} = 64 ÷ sizeof(T)
 
 @inline simd_repeat(t::Val, v::Number) = sd.Vec(ntuple(i -> v, t)...)
 @inline simd_repeat(t::Val, v::NTuple{N}) where {N} = map(simd_repeat, ntuple(i -> t, Val{N}()), v)
@@ -50,14 +56,14 @@ end
 end
 
 function to_mean_transformation!(output_field::AbstractVector, input_field::AbstractVector, indices, op::F = Base.identity) where {F <: Function}
-    @parallel for i in eachindex(output_field)
+    @batch for i in eachindex(output_field)
         @inbounds output_field[i] = mean_sum(input_field, indices[i], op)
     end
     return output_field
 end
 
 function to_mean_transformation!(output_field::AbstractVector, op_out::F, input_field::AbstractVector, indices, op::FI = Base.identity) where {F <: Function, FI <: Function}
-    @parallel for i in eachindex(output_field)
+    @batch for i in eachindex(output_field)
         @inbounds output_field[i] = @inline op_out(output_field[i], mean_sum(input_field, indices[i], op))
     end
     return output_field
@@ -71,7 +77,7 @@ function to_mean_transformation!(output_field::AbstractMatrix{T}, input_field::A
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for i in axes(output_field, 2)
+    @batch for i in axes(output_field, 2)
         @inbounds begin
             inds = map(Int, indices[i])
 
@@ -98,7 +104,7 @@ function to_mean_transformation!(output_field::AbstractMatrix{T}, op_out::F, inp
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for i in axes(output_field, 2)
+    @batch for i in axes(output_field, 2)
         @inbounds begin
             inds = map(Int, indices[i])
 
@@ -125,7 +131,7 @@ function to_mean_transformation!(output_field::AbstractArray{T, 3}, input_field:
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for i in axes(output_field, 2)
+    @batch for i in axes(output_field, 2)
         @inbounds begin
             inds = map(Int, indices[i])
 
@@ -154,7 +160,7 @@ function to_mean_transformation!(output_field::AbstractArray{T, 3}, op_out::F, i
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for i in axes(output_field, 2)
+    @batch for i in axes(output_field, 2)
         @inbounds begin
             inds = map(Int, indices[i])
 
@@ -235,14 +241,14 @@ end
 end
 
 function weighted_sum_transformation!(output_field::AbstractVector, input_field::AbstractVector, weights, indices, op::F = Base.identity) where {F <: Function}
-    @parallel for i in eachindex(output_field)
+    @batch for i in eachindex(output_field)
         @inbounds output_field[i] = @inline weighted_sum(input_field, weights[i], indices[i], op)
     end
     return output_field
 end
 
 function weighted_sum_transformation!(output_field::AbstractVector, op_out::F, input_field::AbstractVector, weights, indices, op::FI = Base.identity) where {F <: Function, FI <: Function}
-    @parallel for i in eachindex(output_field)
+    @batch for i in eachindex(output_field)
         @inbounds output_field[i] = @inline op_out(output_field[i], @inline weighted_sum(input_field, weights[i], indices[i], op))
     end
     return output_field
@@ -257,7 +263,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix{T}, input_fie
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for i in axes(output_field, 2)
+    @batch for i in axes(output_field, 2)
         @inbounds begin
             inds = map(Int, indices[i])
             w = weights[i]
@@ -265,7 +271,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix{T}, input_fie
 
             for k in range_simd
                 k_simd = lane + k
-                output_field[k_simd, i] = @inline weighted_sum(input_field, w_simd, inds, k_simd, op)
+                output_field[k_simd, i] = @inline(weighted_sum(input_field, w_simd, inds, k_simd, op))
             end
 
             for k in range_serial
@@ -287,7 +293,7 @@ function weighted_sum_transformation!(output_field::AbstractMatrix{T}, op_out::F
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for i in axes(output_field, 2)
+    @batch for i in axes(output_field, 2)
         @inbounds begin
             inds = map(Int, indices[i])
             w = weights[i]
@@ -317,7 +323,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{T, 3}, input_f
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for i in axes(output_field, 2)
+    @batch for i in axes(output_field, 2)
         @inbounds begin
             inds = map(Int, indices[i])
             w = weights[i]
@@ -349,7 +355,7 @@ function weighted_sum_transformation!(output_field::AbstractArray{T, 3}, op_out:
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for i in axes(output_field, 2)
+    @batch for i in axes(output_field, 2)
         @inbounds begin
             inds = map(Int, indices[i])
             w = weights[i]

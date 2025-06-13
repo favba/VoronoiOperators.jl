@@ -13,7 +13,7 @@ function compute_weights_edge_to_cell_ringler!(w::ImVecArray{NE, TF, 1}, areaCel
 
     wdata = w.data
 
-    @parallel for c in eachindex(areaCell)
+    @batch for c in eachindex(areaCell)
         @inbounds begin
 
             aux = ImmutableVector{NE,TF}()
@@ -54,7 +54,7 @@ EdgeToCellArea(cells::Cells{false}, edges::Edges{false}, ::Vertices{false}) = Ed
 function compute_weights_edge_to_cell_area!(w::ImVecArray{NE, TI, 1}, areaCell::AbstractVector{TF}, cellPos, vertexPos, verticesOnCell, R::Number)  where {NE, TI, TF}
     wdata = w.data
 
-    @parallel for c in eachindex(areaCell)
+    @batch for c in eachindex(areaCell)
         @inbounds begin
 
             aux = ImmutableVector{NE,TF}()

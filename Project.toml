@@ -7,13 +7,17 @@ version = "1.0.0-DEV"
 ImmutableVectors = "d6059b30-97e8-4ff2-b426-20b29c0469af"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+Polyester = "f517fe37-dbe3-4b94-8317-1923a5111588"
 SIMD = "fdea26ae-647d-5447-a871-4b548cad5224"
+StrideArraysCore = "7792a7ef-975c-4747-a70f-980b88e8d1da"
 TaskLocalValues = "ed4db957-447d-4319-bfb6-7fa9ae7ecf34"
 TensorsLite = "1a1b94bd-d244-45e0-965a-8acfeb92b70f"
 TensorsLiteGeometry = "f9cc0174-84f8-4243-a119-6cf6c33db921"
 VoronoiMeshes = "978c199f-fe38-4011-9fe6-317bc1cdd350"
 
 [compat]
+Polyester = "0.7.18"
+StrideArraysCore = "0.5.7"
 VoronoiMeshes = "1.0.0"
 julia = "1.9"
 

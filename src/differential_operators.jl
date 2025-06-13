@@ -13,7 +13,7 @@ out_eltype(Vop::GradientAtEdge, in_field, op::F = Base.identity) where {F} = Bas
 GradientAtEdge(mesh::AbstractVoronoiMesh) = GradientAtEdge(mesh.cells.n, mesh.edges.lengthDual, mesh.edges.cells)
 
 function gradient_at_edge!(out::AbstractVector, c_field, dc, cellsOnEdge, op::F = Base.identity) where {F <: Function}
-    @parallel for e in eachindex(cellsOnEdge)
+    @batch for e in eachindex(cellsOnEdge)
         @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             out[e] = (op(c_field[c2]) - op(c_field[c1])) / dc[e]
@@ -23,7 +23,7 @@ function gradient_at_edge!(out::AbstractVector, c_field, dc, cellsOnEdge, op::F 
 end
 
 function gradient_at_edge!(out::AbstractVector, op_out::F, c_field, dc, cellsOnEdge, op::F2 = Base.identity) where {F <: Function, F2 <: Function}
-    @parallel for e in eachindex(cellsOnEdge)
+    @batch for e in eachindex(cellsOnEdge)
         @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             out[e] = op_out(out[e], (op(c_field[c2]) - op(c_field[c1])) / dc[e])
@@ -41,7 +41,7 @@ function gradient_at_edge!(out::AbstractMatrix{T}, c_field, dc, cellsOnEdge, op:
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for e in eachindex(cellsOnEdge)
+    @batch for e in eachindex(cellsOnEdge)
         @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             inv_dc = inv(dc[e])
@@ -70,7 +70,7 @@ function gradient_at_edge!(out::AbstractMatrix{T}, op_out::F, c_field, dc, cells
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for e in eachindex(cellsOnEdge)
+    @batch for e in eachindex(cellsOnEdge)
         @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             inv_dc = inv(dc[e])
@@ -100,7 +100,7 @@ function gradient_at_edge!(out::AbstractMatrix{T}, op_out::typeof(+), c_field, d
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for e in eachindex(cellsOnEdge)
+    @batch for e in eachindex(cellsOnEdge)
         @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             inv_dc = inv(dc[e])
@@ -130,7 +130,7 @@ function gradient_at_edge!(out::AbstractArray{T, 3}, c_field, dc, cellsOnEdge, o
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for e in eachindex(cellsOnEdge)
+    @batch for e in eachindex(cellsOnEdge)
         @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             inv_dc = inv(dc[e])
@@ -161,7 +161,7 @@ function gradient_at_edge!(out::AbstractArray{T, 3}, op_out::F, c_field, dc, cel
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for e in eachindex(cellsOnEdge)
+    @batch for e in eachindex(cellsOnEdge)
         @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             inv_dc = inv(dc[e])
@@ -193,7 +193,7 @@ function gradient_at_edge!(out::AbstractArray{T, 3}, op_out::typeof(+), c_field,
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
 
-    @parallel for e in eachindex(cellsOnEdge)
+    @batch for e in eachindex(cellsOnEdge)
         @inbounds @inline begin
             c1, c2 = cellsOnEdge[e]
             inv_dc = inv(dc[e])
@@ -281,7 +281,7 @@ name_output(::CurlAtVertex) = "vertex"
 
 function compute_rotational_at_vertex_weights!(weights, areaVertex, dc, edgesOnVertex, cellsOnVertex, cellsOnEdge)
 
-    @parallel for v in eachindex(weights)
+    @batch for v in eachindex(weights)
         e1, e2, e3 = edgesOnVertex[v]
         c1, c2, c3 = cellsOnVertex[v]
 
@@ -345,7 +345,7 @@ end
 
 function compute_rotational_at_edge_weights!(weights, indices, areaVertex, dc, edgesOnVertex, cellsOnEdge, verticesOnEdge)
 
-    @parallel for e in eachindex(weights)
+    @batch for e in eachindex(weights)
         v1, v2 = verticesOnEdge[e]
         c1, c2 = cellsOnEdge[e]
 

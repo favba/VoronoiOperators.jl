@@ -42,9 +42,9 @@ end
 
 function compute_interpolation_weights_vertex_to_edge_periodic(epos, vpos, voe, dvEdge, xp::Number, yp::Number)
     weights = Vector{NTuple{2, eltype(dvEdge)}}(undef, length(epos))
-    @parallel for e in eachindex(voe)
+    @batch for e in eachindex(voe)
         @inbounds begin
-        v1, v2 = voe[e]
+        v1, _ = voe[e]
         dv = dvEdge[e]
         ep = epos[e]
         l_e_v1 = norm(closest(ep, vpos[v1], xp, yp) - ep)
@@ -59,7 +59,7 @@ end
 
 function compute_interpolation_weights_vertex_to_edge(R::Real, epos, vpos, voe, dvEdge)
     weights = Vector{NTuple{2, eltype(dvEdge)}}(undef, length(epos))
-    @parallel for e in eachindex(voe)
+    @batch for e in eachindex(voe)
         @inbounds begin
         v1, _ = voe[e]
         dv = dvEdge[e]
@@ -147,7 +147,7 @@ end
 
 function compute_area_weights_vertex_to_edge(voe, areaTriangles)
     weights = Vector{NTuple{2, eltype(areaTriangles)}}(undef, length(voe))
-    @parallel for e in eachindex(voe)
+    @batch for e in eachindex(voe)
         @inbounds begin
         v1, v2 = voe[e]
         a1 = areaTriangles[v1]
@@ -195,7 +195,7 @@ end
 
 function compute_baricentric_cell_to_edge_periodic!(w, inds, edge_pos, cell_pos, v_pos, areaTriangle, verticesOnEdge, cellsOnVertex, x_period::Number, y_period::Number)
 
-    @parallel for e in eachindex(verticesOnEdge)
+    @batch for e in eachindex(verticesOnEdge)
         @inbounds begin
         e_pos = edge_pos[e]
         v1, v2 = verticesOnEdge[e]
@@ -261,7 +261,7 @@ end
 
 function compute_baricentric_cell_to_edge!(R, w, inds, cell_pos, v_pos, areaTriangle, verticesOnEdge, cellsOnVertex)
 
-    @parallel for e in eachindex(verticesOnEdge)
+    @batch for e in eachindex(verticesOnEdge)
         @inbounds begin
         v1, v2 = verticesOnEdge[e]
         v1_pos = v_pos[v1]

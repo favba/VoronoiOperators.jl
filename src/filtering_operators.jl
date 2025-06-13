@@ -21,7 +21,7 @@ function weight_indices_matrix_to_immutable(::Val{N_MAX}, nElements::AbstractVec
     w = Vector{ImmutableVector{N_MAX, TF}}(undef, nCells)
     indices = ImmutableVectorArray(Vector{NTuple{N_MAX, TI}}(undef,nCells), Vector{UInt8}(undef, nCells))
 
-    @parallel for i in Base.OneTo(nCells)
+    @batch for i in Base.OneTo(nCells)
         @inbounds begin
             r = Base.OneTo(nElements[i])
             w[i] = ImmutableVector{N_MAX}(@view wm[r, i])

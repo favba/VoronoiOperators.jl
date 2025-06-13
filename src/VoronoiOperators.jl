@@ -4,6 +4,8 @@ using LinearAlgebra
 using TensorsLite, TensorsLiteGeometry, ImmutableVectors, VoronoiMeshes
 using TaskLocalValues
 import SIMD as sd
+using Polyester
+using StrideArraysCore: PtrArray
 
 export VertexToEdgeTransformation, VertexToEdgeMean, VertexToEdgeInterpolation, VertexToEdgePiecewise, VertexToEdgeArea
 export EdgeToCellTransformation, EdgeToCellRingler, EdgeToCellArea, EdgeToCellLSq2, EdgeToCellLSq3

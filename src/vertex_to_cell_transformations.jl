@@ -12,7 +12,7 @@ end
 function compute_weights_vertex_to_cell_area!(w::ImVecArray{NE, TI, 1}, areaCell::AbstractVector{TF}, verticesOnCell, cellsOnVertex, kiteAreaOnVertex::AbstractVector{NTuple{3,TF}})  where {NE, TI, TF}
     wdata = w.data
 
-    @parallel for c in eachindex(areaCell)
+    @batch for c in eachindex(areaCell)
         @inbounds begin
 
             aux = ImmutableVector{NE,TF}()

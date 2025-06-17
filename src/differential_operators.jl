@@ -40,6 +40,8 @@ function gradient_at_edge!(out::AbstractMatrix{T}, c_field, dc, cellsOnEdge, op:
     Nk = size(out, 1)
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
+    is_there_rest = length(range_serial) != 0
+    k_simd_end = lane + (Nk - N_SIMD + 1)
 
     @batch for e in eachindex(cellsOnEdge)
         @inbounds @inline begin
@@ -52,8 +54,11 @@ function gradient_at_edge!(out::AbstractMatrix{T}, c_field, dc, cellsOnEdge, op:
                 out[k_simd, e] = inv_dc_simd * (op(c_field[k_simd, c2]) - op(c_field[k_simd, c1]))
             end
 
-            for k in range_serial
-                out[k, e] = inv_dc * (op(c_field[k, c2]) - op(c_field[k, c1]))
+            #for k in range_serial
+            #    out[k, e] = inv_dc * (op(c_field[k, c2]) - op(c_field[k, c1]))
+            #end
+            if is_there_rest
+                out[k_simd_end, e] = inv_dc_simd * (op(c_field[k_simd_end, c2]) - op(c_field[k_simd_end, c1]))
             end
 
         end #inbounds
@@ -129,6 +134,8 @@ function gradient_at_edge!(out::AbstractArray{T, 3}, c_field, dc, cellsOnEdge, o
     Nk = size(out, 1)
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
+    is_there_rest = length(range_serial) != 0
+    k_simd_end = lane + (Nk - N_SIMD + 1)
 
     @batch for e in eachindex(cellsOnEdge)
         @inbounds @inline begin
@@ -143,8 +150,11 @@ function gradient_at_edge!(out::AbstractArray{T, 3}, c_field, dc, cellsOnEdge, o
                     out[k_simd, e, t] = inv_dc_simd * (op(c_field[k_simd, c2, t]) - op(c_field[k_simd, c1, t]))
                 end
 
-                for k in range_serial
-                    out[k, e, t] = inv_dc * (op(c_field[k, c2, t]) - op(c_field[k, c1, t]))
+                #for k in range_serial
+                #    out[k, e, t] = inv_dc * (op(c_field[k, c2, t]) - op(c_field[k, c1, t]))
+                #end
+                if is_there_rest
+                    out[k_simd_end, e, t] = inv_dc_simd * (op(c_field[k_simd_end, c2, t]) - op(c_field[k_simd_end, c1, t]))
                 end
             end
         end #inbounds

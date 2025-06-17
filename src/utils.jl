@@ -83,6 +83,8 @@ function to_mean_transformation!(output_field::AbstractMatrix{T}, input_field::A
     Nk = size(output_field, 1)
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
+    is_there_rest = length(range_serial) != 0
+    k_simd_end = lane + (Nk - N_SIMD + 1)
 
     @batch for i in axes(output_field, 2)
         @inbounds begin
@@ -93,8 +95,11 @@ function to_mean_transformation!(output_field::AbstractMatrix{T}, input_field::A
                 output_field[k_simd, i] = mean_sum(input_field, inds, k_simd, op)
             end
 
-            for k in range_serial
-                output_field[k, i] = mean_sum(input_field, inds, k, op)
+            #for k in range_serial
+            #    output_field[k, i] = mean_sum(input_field, inds, k, op)
+            #end
+            if is_there_rest
+                output_field[k_simd_end, i] = mean_sum(input_field, inds, k_simd_end, op)
             end
 
         end #inbounds
@@ -137,6 +142,8 @@ function to_mean_transformation!(output_field::AbstractArray{T, 3}, input_field:
     Nk = size(output_field, 1)
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
+    is_there_rest = length(range_serial) != 0
+    k_simd_end = lane + (Nk - N_SIMD + 1)
 
     @batch for i in axes(output_field, 2)
         @inbounds begin
@@ -148,8 +155,11 @@ function to_mean_transformation!(output_field::AbstractArray{T, 3}, input_field:
                     output_field[k_simd, i, t] = mean_sum(input_field, inds, k_simd, t, op)
                 end
 
-                for k in range_serial
-                    output_field[k, i, t] = mean_sum(input_field, inds, k, t, op)
+                #for k in range_serial
+                #    output_field[k, i, t] = mean_sum(input_field, inds, k, t, op)
+                #end
+                if is_there_rest
+                    output_field[k_simd_end, i, t] = mean_sum(input_field, inds, k_simd_end, t, op)
                 end
             end
 
@@ -269,6 +279,8 @@ function weighted_sum_transformation!(output_field::AbstractMatrix{T}, input_fie
     Nk = size(output_field, 1)
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
+    is_there_rest = length(range_serial) != 0
+    k_simd_end = lane + (Nk - N_SIMD + 1)
 
     @batch for i in axes(output_field, 2)
         @inbounds begin
@@ -281,8 +293,11 @@ function weighted_sum_transformation!(output_field::AbstractMatrix{T}, input_fie
                 output_field[k_simd, i] = @inline(weighted_sum(input_field, w_simd, inds, k_simd, op))
             end
 
-            for k in range_serial
-                output_field[k, i] = @inline weighted_sum(input_field, w, inds, k, op)
+            #for k in range_serial
+            #    output_field[k, i] = @inline weighted_sum(input_field, w, inds, k, op)
+            #end
+            if is_there_rest
+                output_field[k_simd_end, i] = @inline(weighted_sum(input_field, w_simd, inds, k_simd_end, op))
             end
 
         end #inbounds
@@ -329,6 +344,8 @@ function weighted_sum_transformation!(output_field::AbstractArray{T, 3}, input_f
     Nk = size(output_field, 1)
 
     range_simd, range_serial = simd_ranges(N_SIMD, Nk)
+    is_there_rest = length(range_serial) != 0
+    k_simd_end = lane + (Nk - N_SIMD + 1)
 
     @batch for i in axes(output_field, 2)
         @inbounds begin
@@ -342,8 +359,11 @@ function weighted_sum_transformation!(output_field::AbstractArray{T, 3}, input_f
                     output_field[k_simd, i, t] = @inline weighted_sum(input_field, w_simd, inds, k_simd, t, op)
                 end
 
-                for k in range_serial
-                    output_field[k, i, t] = @inline weighted_sum(input_field, w, inds, k, t, op)
+                #for k in range_serial
+                #    output_field[k, i, t] = @inline weighted_sum(input_field, w, inds, k, t, op)
+                #end
+                if is_there_rest
+                    output_field[k_simd_end, i, t] = @inline weighted_sum(input_field, w_simd, inds, k_simd_end, t, op)
                 end
             end
 

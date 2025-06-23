@@ -49,7 +49,7 @@ struct EdgeToCellArea{NEdges, TI, TF} <: EdgeToCellTransformation{NEdges, TI, TF
     weights::ImVecArray{NEdges, TF, 1}
 end
 
-EdgeToCellArea(cells::Cells{false}, edges::Edges{false}, ::Vertices{false}) = EdgeToCellArea(edges.n, cells.edges, compute_weights_edge_to_cell_ringler(cells, edges))
+EdgeToCellArea(cells::Cells{false}, edges::Edges{false}, ::Vertices{false}) = EdgeToCellArea(edges.n, cells.edges, compute_weights_edge_to_cell_area(cells, edges, vertices))
 
 function compute_weights_edge_to_cell_area!(w::ImVecArray{NE, TI, 1}, areaCell::AbstractVector{TF}, cellPos, vertexPos, verticesOnCell, R::Number)  where {NE, TI, TF}
     wdata = w.data

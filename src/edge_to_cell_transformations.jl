@@ -17,11 +17,13 @@ function compute_weights_edge_to_cell_ringler!(w::ImVecArray{NE, TF, 1}, areaCel
         @inbounds begin
 
             aux = ImmutableVector{NE,TF}()
-            term = inv(4 * areaCell[c])
+            #term = inv(4 * areaCell[c])
 
             for e in edgesOnCell[c]
-                aux = push(aux, term * dcEdge[e] * dvEdge[e])
+                #aux = push(aux, term * dcEdge[e] * dvEdge[e])
+                aux = push(aux, dcEdge[e] * dvEdge[e])
             end
+            aux = aux ./ sum(aux)
 
             wdata[c] = padwith(aux, zero(TF)).data
         end

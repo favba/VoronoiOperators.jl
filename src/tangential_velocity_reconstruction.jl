@@ -4,17 +4,17 @@ name_output(::TangentialVelocityReconstruction) = "edge"
 n_input(a::TangentialVelocityReconstruction) = n_output(a)
 
 struct TangentialVelocityReconstructionThuburn{N_MAX, TI, TF} <: TangentialVelocityReconstruction{N_MAX, TI, TF}
-    indices::ImVecArray{N_MAX, TI, 1}
-    weights::ImVecArray{N_MAX, TF, 1}
+    indices::SmVecArray{N_MAX, TI, 1}
+    weights::SmVecArray{N_MAX, TF, 1}
 end
 
-function compute_weightsOnEdge_trisk!(edgesOnEdge::AbstractVector{<:ImmutableVector{NE, TI}}, weightsOnEdge::AbstractVector{<:ImmutableVector{NE, TF}}, cellsOnEdge, verticesOnCell, edgesOnCell, dcEdge, dvEdge, kiteAreasOnVertex, cellsOnVertex, nEdgesOnCell, areaCell) where {NE, TI, TF}
+function compute_weightsOnEdge_trisk!(edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}}, weightsOnEdge::AbstractVector{<:SmallVector{NE, TF}}, cellsOnEdge, verticesOnCell, edgesOnCell, dcEdge, dvEdge, kiteAreasOnVertex, cellsOnVertex, nEdgesOnCell, areaCell) where {NE, TI, TF}
 
     @parallel for e in eachindex(cellsOnEdge)
         @inbounds begin
 
-        w = ImmutableVector{NE, TF}()
-        inds = ImmutableVector{NE, TI}()
+        w = SmallVector{NE, TF}()
+        inds = SmallVector{NE, TI}()
         c1,c2 = cellsOnEdge[e]
         inv_de = inv(dcEdge[e])
 
@@ -53,7 +53,7 @@ function compute_weightsOnEdge_trisk!(edgesOnEdge::AbstractVector{<:ImmutableVec
         end
 
         edgesOnEdge[e] = inds
-        weightsOnEdge[e] = padwith(w, zero(TF))
+        weightsOnEdge[e] = w
         end #inbounds
     end
     return edgesOnEdge, weightsOnEdge
@@ -67,8 +67,8 @@ compute_weightsOnEdge_trisk!(indices, weightsOnEdge,mesh::AbstractVoronoiMesh) =
 
 function compute_weightsOnEdge_trisk(mesh::AbstractVoronoiMesh)
     nEdgesOnEdge = maximum(x->(x[1] + x[2] - 2), ((a,inds) -> @inbounds((a[inds[1]], a[inds[2]]))).((mesh.cells.nEdges,), mesh.edges.cells))
-    indices =ImVecArray{nEdgesOnEdge, integer_type(mesh)}(mesh.edges.n)
-    weights =ImmutableVectorArray(Vector{NTuple{nEdgesOnEdge, float_type(mesh)}}(undef, mesh.edges.n), indices.length)
+    indices =SmVecArray{nEdgesOnEdge, integer_type(mesh)}(mesh.edges.n)
+    weights =SmallVectorArray(Vector{FixedVector{nEdgesOnEdge, float_type(mesh)}}(undef, mesh.edges.n), indices.length)
     return compute_weightsOnEdge_trisk!(indices, weights, mesh)
 end
 
@@ -77,13 +77,13 @@ function TangentialVelocityReconstructionThuburn(mesh::AbstractVoronoiMesh)
 end
 
 struct TangentialVelocityReconstructionPeixoto{N_MAX, TI, TF} <: TangentialVelocityReconstruction{N_MAX, TI, TF}
-    indices::ImVecArray{N_MAX, TI, 1}
-    weights::ImVecArray{N_MAX, TF, 1}
+    indices::SmVecArray{N_MAX, TI, 1}
+    weights::SmVecArray{N_MAX, TF, 1}
 end
 
 function compute_weightsOnEdge_Peixoto_periodic!(
-            edgesOnEdge::AbstractVector{<:ImmutableVector{NE, TI}},
-            weightsOnEdge::AbstractVector{<:ImmutableVector{NE, TF}},
+            edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}},
+            weightsOnEdge::AbstractVector{<:SmallVector{NE, TF}},
             edge_pos,
             cell_pos,
             v_pos,
@@ -99,8 +99,8 @@ function compute_weightsOnEdge_Peixoto_periodic!(
     @parallel for e in eachindex(cellsOnEdge)
         @inbounds begin
 
-        w = ImmutableVector{NE, TF}()
-        inds = ImmutableVector{NE, TI}()
+        w = SmallVector{NE, TF}()
+        inds = SmallVector{NE, TI}()
 
         ep = edge_pos[e]
         c1,c2 = cellsOnEdge[e]
@@ -163,7 +163,7 @@ function compute_weightsOnEdge_Peixoto_periodic!(
         end
 
         edgesOnEdge[e] = inds
-        weightsOnEdge[e] = padwith(w, zero(TF))
+        weightsOnEdge[e] = w
         end #inbounds
     end
     return edgesOnEdge, weightsOnEdge
@@ -187,8 +187,8 @@ function compute_weightsOnEdge_Peixoto!(indices, w, cells::Cells{false},vertices
 end
 
 function compute_weightsOnEdge_Peixoto_spherical!(
-            edgesOnEdge::AbstractVector{<:ImmutableVector{NE, TI}},
-            weightsOnEdge::AbstractVector{<:ImmutableVector{NE, TF}},
+            edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}},
+            weightsOnEdge::AbstractVector{<:SmallVector{NE, TF}},
             R::Number,
             cell_pos,
             v_pos,
@@ -204,8 +204,8 @@ function compute_weightsOnEdge_Peixoto_spherical!(
     @parallel for e in eachindex(cellsOnEdge)
         @inbounds begin
 
-        w = ImmutableVector{NE, TF}()
-        inds = ImmutableVector{NE, TI}()
+        w = SmallVector{NE, TF}()
+        inds = SmallVector{NE, TI}()
 
         c1,c2 = cellsOnEdge[e]
         c1e = cell_pos[c1]
@@ -270,7 +270,7 @@ function compute_weightsOnEdge_Peixoto_spherical!(
         end
 
         edgesOnEdge[e] = inds
-        weightsOnEdge[e] = padwith(w, zero(TF))
+        weightsOnEdge[e] = w
         end #inbounds
     end
     return edgesOnEdge, weightsOnEdge
@@ -297,8 +297,8 @@ compute_weightsOnEdge_Peixoto!(indices, weightsOnEdge,mesh::AbstractVoronoiMesh)
 
 function compute_weightsOnEdge_Peixoto(mesh::AbstractVoronoiMesh)
     nEdgesOnEdge = maximum(x->(x[1] + x[2] - 2), ((a,inds) -> @inbounds((a[inds[1]], a[inds[2]]))).((mesh.cells.nEdges,), mesh.edges.cells))
-    indices =ImVecArray{nEdgesOnEdge, integer_type(mesh)}(mesh.edges.n)
-    weights =ImmutableVectorArray(Vector{NTuple{nEdgesOnEdge, float_type(mesh)}}(undef, mesh.edges.n), indices.length)
+    indices =SmVecArray{nEdgesOnEdge, integer_type(mesh)}(mesh.edges.n)
+    weights =SmallVectorArray(Vector{FixedVector{nEdgesOnEdge, float_type(mesh)}}(undef, mesh.edges.n), indices.length)
     return compute_weightsOnEdge_Peixoto!(indices, weights, mesh)
 end
 
@@ -307,13 +307,13 @@ function TangentialVelocityReconstructionPeixoto(mesh::AbstractVoronoiMesh)
 end
 
 struct TangentialVelocityReconstructionVelRecon{N_MAX, TI, TF} <: TangentialVelocityReconstruction{N_MAX, TI, TF}
-    indices::ImVecArray{N_MAX, TI, 1}
-    weights::ImVecArray{N_MAX, TF, 1}
+    indices::SmVecArray{N_MAX, TI, 1}
+    weights::SmVecArray{N_MAX, TF, 1}
 end
 
 function compute_tangential_weightsOnEdge_velRecon_periodic!(
-        edgesOnEdge::AbstractVector{<:ImmutableVector{NE, TI}},
-        weightsOnEdge::AbstractVector{<:ImmutableVector{NE, TF}},
+        edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}},
+        weightsOnEdge::AbstractVector{<:SmallVector{NE, TF}},
         weightsCell, tangentEdge, edgesOnCell, cellsOnEdge
     ) where {NE, TI, TF}
 
@@ -333,8 +333,8 @@ function compute_tangential_weightsOnEdge_velRecon_periodic!(
         ip1 = circshift(eoc1, rot1)[2:end]
         wp1 = map(x -> x ⋅ te, @inbounds(wc1[2:end]))
 
-        we = ImmutableVector{NE,TF}()
-        ie = ImmutableVector{NE,TI}()
+        we = SmallVector{NE,TF}()
+        ie = SmallVector{NE,TI}()
         for i in eachindex(wp1)
             we = @inbounds push(we, wp1[i] / 2)
             ie = @inbounds push(ie, ip1[i])
@@ -353,7 +353,7 @@ function compute_tangential_weightsOnEdge_velRecon_periodic!(
             ie = @inbounds push(ie, ip2[i])
         end
 
-        wdata[e] = padwith(we, zero(TF)).data
+        wdata[e] = fixedvector(we)
         edgesOnEdge[e] = ie
     end
     end
@@ -370,8 +370,8 @@ function compute_tangential_weightsOnEdge_velRecon!(cells::Cells{false}, edges::
 end
 
 function compute_tangential_weightsOnEdge_velRecon_spherical!(
-        edgesOnEdge::AbstractVector{<:ImmutableVector{NE, TI}},
-        weightsOnEdge::AbstractVector{<:ImmutableVector{NE, TF}},
+        edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}},
+        weightsOnEdge::AbstractVector{<:SmallVector{NE, TF}},
         weightsCell, cellPos, tangentEdge, edgesOnCell, cellsOnEdge, R::Number
     ) where {NE, TI, TF}
 
@@ -394,8 +394,8 @@ function compute_tangential_weightsOnEdge_velRecon_spherical!(
         ip1 = circshift(eoc1, rot1)[2:end]
         wp1 = map(x -> x ⋅ te1, @inbounds(wc1[2:end]))
 
-        we = ImmutableVector{NE,TF}()
-        ie = ImmutableVector{NE,TI}()
+        we = SmallVector{NE,TF}()
+        ie = SmallVector{NE,TI}()
         for i in eachindex(wp1)
             we = @inbounds push(we, wp1[i] / 2)
             ie = @inbounds push(ie, ip1[i])
@@ -417,7 +417,7 @@ function compute_tangential_weightsOnEdge_velRecon_spherical!(
             ie = @inbounds push(ie, ip2[i])
         end
 
-        wdata[e] = padwith(we, zero(TF)).data
+        wdata[e] = fixedvector(we)
         edgesOnEdge[e] = ie
     end
     end
@@ -435,8 +435,8 @@ end
 
 function compute_tangential_weightsOnEdge_velRecon(cells::Cells, edges::Edges, velRecon::CellVelocityReconstruction)
     nEdgesOnEdge = maximum(x->(x[1] + x[2] - 2), ((a,inds) -> @inbounds((a[inds[1]], a[inds[2]]))).((cells.nEdges,), edges.cells))
-    indices =ImVecArray{nEdgesOnEdge, integer_type(edges)}(edges.n)
-    weights =ImmutableVectorArray(Vector{NTuple{nEdgesOnEdge, float_type(cells)}}(undef, edges.n), indices.length)
+    indices =SmVecArray{nEdgesOnEdge, integer_type(edges)}(edges.n)
+    weights =SmallVectorArray(Vector{FixedVector{nEdgesOnEdge, float_type(cells)}}(undef, edges.n), indices.length)
     return compute_tangential_weightsOnEdge_velRecon!(cells, edges, velRecon, indices, weights)
 end
 

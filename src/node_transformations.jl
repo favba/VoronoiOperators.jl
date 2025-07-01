@@ -5,7 +5,7 @@ name_output(::VertexToEdgeTransformation) = "edge"
 
 struct VertexToEdgeMean{TI} <: VertexToEdgeTransformation
     n::Int
-    indices::Vector{NTuple{2, TI}}
+    indices::Vector{FixedVector{2, TI}}
 end
 
 out_eltype(::VertexToEdgeMean, in_file::AbstractArray{T}, op::F = Base.identity) where {T, F} = Base.promote_op(/, Base.promote_op(op, T), Int)
@@ -19,8 +19,8 @@ VertexToEdgeMean(mesh::AbstractVoronoiMesh) = VertexToEdgeMean(mesh.vertices, me
 
 struct VertexToEdgeWeighted{TI, TF} <: VertexToEdgeTransformation
     n::Int
-    indices::Vector{NTuple{2, TI}}
-    weights::Vector{NTuple{2, TF}}
+    indices::Vector{FixedVector{2, TI}}
+    weights::Vector{FixedVector{2, TF}}
 end
 
 struct VertexToEdgeInterpolation{TI, TF} <: VertexToEdgeTransformation
@@ -41,7 +41,7 @@ function Base.getproperty(v2e::VertexToEdgeInterpolation, s::Symbol)
 end
 
 function compute_interpolation_weights_vertex_to_edge_periodic(epos, vpos, voe, dvEdge, xp::Number, yp::Number)
-    weights = Vector{NTuple{2, eltype(dvEdge)}}(undef, length(epos))
+    weights = Vector{FixedVector{2, eltype(dvEdge)}}(undef, length(epos))
     @batch for e in eachindex(voe)
         @inbounds begin
         v1, _ = voe[e]
@@ -58,7 +58,7 @@ function compute_interpolation_weights_vertex_to_edge_periodic(epos, vpos, voe, 
 end
 
 function compute_interpolation_weights_vertex_to_edge(R::Real, epos, vpos, voe, dvEdge)
-    weights = Vector{NTuple{2, eltype(dvEdge)}}(undef, length(epos))
+    weights = Vector{FixedVector{2, eltype(dvEdge)}}(undef, length(epos))
     @batch for e in eachindex(voe)
         @inbounds begin
         v1, _ = voe[e]
@@ -146,7 +146,7 @@ function Base.getproperty(v2e::VertexToEdgeArea, s::Symbol)
 end
 
 function compute_area_weights_vertex_to_edge(voe, areaTriangles)
-    weights = Vector{NTuple{2, eltype(areaTriangles)}}(undef, length(voe))
+    weights = Vector{FixedVector{2, eltype(areaTriangles)}}(undef, length(voe))
     @batch for e in eachindex(voe)
         @inbounds begin
         v1, v2 = voe[e]
@@ -175,7 +175,7 @@ name_output(::CellToEdgeTransformation) = "edge"
 
 struct CellToEdgeMean{TI} <: CellToEdgeTransformation
     n::Int
-    indices::Vector{NTuple{2, TI}}
+    indices::Vector{FixedVector{2, TI}}
 end
 
 out_eltype(::CellToEdgeMean, in_file::AbstractArray{T}, op::F = Base.identity) where {T, F} = Base.promote_op(/, Base.promote_op(op, T), Int)
@@ -189,8 +189,8 @@ CellToEdgeMean(mesh::AbstractVoronoiMesh) = CellToEdgeMean(mesh.cells, mesh.edge
 
 struct CellToEdgeBaricentric{TI, TF} <: CellToEdgeTransformation
     n::Int
-    indices::Vector{NTuple{3, TI}}
-    weights::Vector{NTuple{3, TF}}
+    indices::Vector{FixedVector{3, TI}}
+    weights::Vector{FixedVector{3, TF}}
 end
 
 function compute_baricentric_cell_to_edge_periodic!(w, inds, edge_pos, cell_pos, v_pos, areaTriangle, verticesOnEdge, cellsOnVertex, x_period::Number, y_period::Number)
@@ -246,8 +246,8 @@ end
 
 function compute_baricentric_cell_to_edge_periodic(edge_pos, cell_pos, vertex_pos, areaTriangle, verticesOnEdge, cellsOnVertex, x_period::Number, y_period::Number)
     TF = eltype(cell_pos.x)
-    w = Vector{NTuple{3, TF}}(undef, length(verticesOnEdge))
-    inds = Vector{NTuple{3, eltype(eltype(verticesOnEdge))}}(undef, length(verticesOnEdge))
+    w = Vector{FixedVector{3, TF}}(undef, length(verticesOnEdge))
+    inds = Vector{FixedVector{3, eltype(eltype(verticesOnEdge))}}(undef, length(verticesOnEdge))
     return compute_baricentric_cell_to_edge_periodic!(w, inds, edge_pos, cell_pos, vertex_pos, areaTriangle, verticesOnEdge, cellsOnVertex, x_period, y_period)
 end
 
@@ -319,8 +319,8 @@ end
 
 function compute_baricentric_cell_to_edge(R, cell_pos, vertex_pos, areaTriangle, verticesOnEdge, cellsOnVertex)
     TF = eltype(cell_pos.x)
-    w = Vector{NTuple{3, TF}}(undef, length(verticesOnEdge))
-    inds = Vector{NTuple{3, eltype(eltype(verticesOnEdge))}}(undef, length(verticesOnEdge))
+    w = Vector{FixedVector{3, TF}}(undef, length(verticesOnEdge))
+    inds = Vector{FixedVector{3, eltype(eltype(verticesOnEdge))}}(undef, length(verticesOnEdge))
     return compute_baricentric_cell_to_edge!(R, w, inds, cell_pos, vertex_pos, areaTriangle, verticesOnEdge, cellsOnVertex)
 end
 

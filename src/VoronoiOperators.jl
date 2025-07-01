@@ -1,7 +1,7 @@
 module VoronoiOperators
 
 using LinearAlgebra
-using TensorsLite, TensorsLiteGeometry, ImmutableVectors, VoronoiMeshes
+using TensorsLite, TensorsLiteGeometry, SmallCollections, VoronoiMeshes
 using TaskLocalValues
 import SIMD as sd
 using Polyester
@@ -74,7 +74,6 @@ end
 include("node_transformations.jl")
 include("edge_to_cell_transformations.jl")
 include("vertex_to_cell_transformations.jl")
-include("cell_vector_to_edge_transformations.jl")
 include("cell_velocity_reconstruction.jl")
 include("vertex_velocity_reconstruction.jl")
 include("kinetic_energy_reconstruction.jl")

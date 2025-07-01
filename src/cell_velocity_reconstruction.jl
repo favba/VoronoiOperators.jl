@@ -4,15 +4,15 @@ name_output(::CellVelocityReconstruction) = "cell"
 
 struct CellVelocityReconstructionPerot{N_MAX, TI, TF, TZ} <: CellVelocityReconstruction{N_MAX, TI, TF, TZ}
     n::Int
-    indices::ImVecArray{N_MAX, TI, 1}
-    weights::ImVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
+    indices::SmVecArray{N_MAX, TI, 1}
+    weights::SmVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
 end
 
-function perot_velocity_reconstruction_from_normal(vertices::ImmutableVector{N_MAX}, signEdge, base_point::Vec) where {N_MAX}
+function perot_velocity_reconstruction_from_normal(vertices::SmallVector{N_MAX}, signEdge, base_point::Vec) where {N_MAX}
 
     inv_a = inv(area(vertices))
 
-    @inbounds w = ImmutableVector{N_MAX, typeof(base_point)}()
+    @inbounds w = SmallVector{N_MAX, typeof(base_point)}()
 
     l = length(vertices)
     vert1 = @inbounds(vertices[l])
@@ -27,7 +27,7 @@ function perot_velocity_reconstruction_from_normal(vertices::ImmutableVector{N_M
     return w
 end
 
-function compute_weights_perot_velocity_reconstruction_periodic!(w::AbstractVector{ImmutableVector{N_MAX, T}}, c_pos,  v_pos, signEdge, verticesOnCell, xp::Number, yp::Number) where {T, N_MAX}
+function compute_weights_perot_velocity_reconstruction_periodic!(w::AbstractVector{SmallVector{N_MAX, T}}, c_pos,  v_pos, signEdge, verticesOnCell, xp::Number, yp::Number) where {T, N_MAX}
 
     wdata = w.data
     @parallel for c in eachindex(verticesOnCell)
@@ -36,7 +36,7 @@ function compute_weights_perot_velocity_reconstruction_periodic!(w::AbstractVect
         voc = verticesOnCell[c]
         vertices = map(i -> closest(cp, @inbounds(v_pos[i]), xp, yp), voc)
         aux = perot_velocity_reconstruction_from_normal(vertices, signEdge[c], cp)
-        wdata[c] = padwith(aux, zero(T)).data
+        wdata[c] = fixedvector(aux)
         end #inbounds
     end
     return w
@@ -44,7 +44,7 @@ end
 
 function CellVelocityReconstructionPerot(cells::Cells{false, N_MAX, TI, TF}, edges::Edges, vertices::Vertices, x_period::Number, y_period::Number) where {N_MAX, TI, TF}
     edgesOnCell = cells.edges
-    weights =ImmutableVectorArray(Vector{NTuple{N_MAX, Vec2Dxy{TF}}}(undef, cells.n), edgesOnCell.length)
+    weights =SmallVectorArray(Vector{FixedVector{N_MAX, Vec2Dxy{TF}}}(undef, cells.n), edgesOnCell.length)
     compute_weights_perot_velocity_reconstruction_periodic!(weights, cells.position, vertices.position, cells.edgesSign, cells.vertices, x_period, y_period)
     return CellVelocityReconstructionPerot(edges.n, edgesOnCell, weights)
 end
@@ -53,7 +53,7 @@ function CellVelocityReconstructionPerot(mesh::AbstractVoronoiMesh{false})
     CellVelocityReconstructionPerot(mesh.cells, mesh.edges, mesh.vertices, mesh.x_period, mesh.y_period)
 end
 
-function compute_weights_perot_velocity_reconstruction_spherical!(w::AbstractVector{ImmutableVector{N_MAX, T}}, R::Number, c_pos, v_pos, signEdges, verticesOnCell) where {T, N_MAX}
+function compute_weights_perot_velocity_reconstruction_spherical!(w::AbstractVector{SmallVector{N_MAX, T}}, R::Number, c_pos, v_pos, signEdges, verticesOnCell) where {T, N_MAX}
 
     wdata = w.data
     @parallel for c in eachindex(verticesOnCell)
@@ -64,7 +64,7 @@ function compute_weights_perot_velocity_reconstruction_spherical!(w::AbstractVec
         vertices = map(i -> (@inbounds(v_pos[i]) / R), voc)
         vertices_proj = project_points_to_tangent_plane(1, cp_n, vertices)
         aux = perot_velocity_reconstruction_from_normal(vertices_proj, signEdges[c], cp_n)
-        wdata[c] = padwith(aux, zero(T)).data
+        wdata[c] = fixedvector(aux)
         end #inbounds
     end
     return w
@@ -72,7 +72,7 @@ end
 
 function CellVelocityReconstructionPerot(cells::Cells{true, N_MAX, TI, TF}, edges::Edges{true}, vertices::Vertices{true}) where {N_MAX, TI, TF}
     edgesOnCell = cells.edges
-    weights =ImmutableVectorArray(Vector{NTuple{N_MAX, Vec3D{TF}}}(undef, cells.n), edgesOnCell.length)
+    weights =SmallVectorArray(Vector{FixedVector{N_MAX, Vec3D{TF}}}(undef, cells.n), edgesOnCell.length)
     compute_weights_perot_velocity_reconstruction_spherical!(weights, cells.sphere_radius, cells.position, vertices.position, cells.edgesSign, cells.vertices)
     return CellVelocityReconstructionPerot(edges.n, edgesOnCell, weights)
 end
@@ -83,20 +83,20 @@ end
 
 struct CellVelocityReconstructionLSq1{N_MAX, TI, TF, TZ} <: CellVelocityReconstruction{N_MAX, TI, TF, TZ}
     n::Int
-    indices::ImVecArray{N_MAX, TI, 1}
-    weights::ImVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
+    indices::SmVecArray{N_MAX, TI, 1}
+    weights::SmVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
 end
 
 function CellVelocityReconstructionLSq1(cells::Cells{false, N_MAX, TI, TF}, edges::Edges) where {N_MAX, TI, TF}
     edgesOnCell = cells.edges
-    weights =ImmutableVectorArray(Vector{NTuple{N_MAX, Vec2Dxy{TF}}}(undef, cells.n), edgesOnCell.length)
+    weights =SmallVectorArray(Vector{FixedVector{N_MAX, Vec2Dxy{TF}}}(undef, cells.n), edgesOnCell.length)
     compute_weights_vec_lsq1_periodic!(weights, edgesOnCell, edges.normal)
     return CellVelocityReconstructionLSq1(edges.n, edgesOnCell, weights)
 end
 
 function CellVelocityReconstructionLSq1(cells::Cells{true, N_MAX, TI, TF}, edges::Edges) where {N_MAX, TI, TF}
     edgesOnCell = cells.edges
-    weights =ImmutableVectorArray(Vector{NTuple{N_MAX, Vec3D{TF}}}(undef, cells.n), edgesOnCell.length)
+    weights =SmallVectorArray(Vector{FixedVector{N_MAX, Vec3D{TF}}}(undef, cells.n), edgesOnCell.length)
     compute_weights_vec_lsq1_spherical!(weights, cells.position, edgesOnCell, edges.normal, cells.sphere_radius)
     return CellVelocityReconstructionLSq1(edges.n, edgesOnCell, weights)
 end
@@ -107,20 +107,20 @@ end
 
 struct CellVelocityReconstructionLSq2{N_MAX, TI, TF, TZ} <: CellVelocityReconstruction{N_MAX, TI, TF, TZ}
     n::Int
-    indices::ImVecArray{N_MAX, TI, 1}
-    weights::ImVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
+    indices::SmVecArray{N_MAX, TI, 1}
+    weights::SmVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
 end
 
 function CellVelocityReconstructionLSq2(cells::Cells{false, N_MAX, TI, TF}, edges::Edges) where {N_MAX, TI, TF}
     edgesOnCell = cells.edges
-    weights =ImmutableVectorArray(Vector{NTuple{N_MAX, Vec2Dxy{TF}}}(undef, cells.n), edgesOnCell.length)
+    weights =SmallVectorArray(Vector{FixedVector{N_MAX, Vec2Dxy{TF}}}(undef, cells.n), edgesOnCell.length)
     compute_weights_vec_lsq2_periodic!(weights, cells.position, edgesOnCell, edges.position, edges.normal, cells.x_period, cells.y_period)
     return CellVelocityReconstructionLSq2(edges.n, edgesOnCell, weights)
 end
 
 function CellVelocityReconstructionLSq2(cells::Cells{true, N_MAX, TI, TF}, edges::Edges) where {N_MAX, TI, TF}
     edgesOnCell = cells.edges
-    weights =ImmutableVectorArray(Vector{NTuple{N_MAX, Vec3D{TF}}}(undef, cells.n), edgesOnCell.length)
+    weights =SmallVectorArray(Vector{FixedVector{N_MAX, Vec3D{TF}}}(undef, cells.n), edgesOnCell.length)
     compute_weights_vec_lsq2_spherical!(weights, cells.position, edgesOnCell, edges.position, edges.normal, cells.sphere_radius)
     return CellVelocityReconstructionLSq2(edges.n, edgesOnCell, weights)
 end

@@ -3,8 +3,8 @@ abstract type FilteringOperator <: LinearVoronoiOperator end
 using OrderedCollections
 
 struct CellBoxFilter{N_MAX, TI, TF, TW <: Union{TF, Vector{TF}}} <: FilteringOperator
-    weights::Vector{ImmutableVector{N_MAX, TF}}
-    indices::ImVecArray{N_MAX, TI, 1}
+    weights::Vector{SmallVector{N_MAX, TF}}
+    indices::SmVecArray{N_MAX, TI, 1}
     width::TW
 end
 name_input(::CellBoxFilter) = "cell"
@@ -18,23 +18,23 @@ end
 
 function weight_indices_matrix_to_immutable(::Val{N_MAX}, nElements::AbstractVector, inds::Matrix{TI}, wm::Matrix{TF}) where {N_MAX, TI, TF}
     nCells = length(nElements)
-    w = Vector{ImmutableVector{N_MAX, TF}}(undef, nCells)
-    indices = ImmutableVectorArray(Vector{NTuple{N_MAX, TI}}(undef,nCells), Vector{UInt8}(undef, nCells))
+    w = Vector{SmallVector{N_MAX, TF}}(undef, nCells)
+    indices = SmallVectorArray(Vector{FixedVector{N_MAX, TI}}(undef,nCells), Vector{Int16}(undef, nCells))
 
     @batch for i in Base.OneTo(nCells)
         @inbounds begin
             r = Base.OneTo(nElements[i])
-            w[i] = ImmutableVector{N_MAX}(@view wm[r, i])
-            indices[i] = ImmutableVector{N_MAX}(@view inds[r, i])
+            w[i] = SmallVector{N_MAX}(@view wm[r, i])
+            indices[i] = SmallVector{N_MAX}(@view inds[r, i])
         end
     end
 
     return indices, w
 end
 
-function compute_cell_box_filter_weights_and_indices_periodic(Δ::Number, c_position, areaCell, cellsOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, verticesOnCell, v_position, xp::Number, yp::Number) where {N_MAX}
+function compute_cell_box_filter_weights_and_indices_periodic(Δ::Number, c_position, areaCell, cellsOnCell::AbstractVector{<:SmallVector{N_MAX}}, verticesOnCell, v_position, xp::Number, yp::Number) where {N_MAX}
     nCells = length(areaCell)
-    w = zeros(eltype(areaCell), 255, nCells) # I'm assuming the filtering stencil won't be larger than 255, which is the maximum number of elements supported by ImmutableVectors
+    w = zeros(eltype(areaCell), 255, nCells) # I'm assuming the filtering stencil won't be larger than 255, which is the maximum number of elements supported by SmallCollections
     IT = eltype(eltype(cellsOnCell))
     inds = zeros(IT, 255, nCells)
     nElementsOnCell = zeros(IT, nCells)
@@ -129,9 +129,9 @@ function CellBoxFilter(mesh::AbstractVoronoiMesh{false}, Δ::Number)
     return CellBoxFilter(w, indices, Δ)
 end
 
-function compute_cell_box_filter_weights_and_indices_periodic_variable_resolution(width_func::F, c_position, areaCell, cellsOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, verticesOnCell, v_position, xp::Number, yp::Number) where {F <: Function, N_MAX}
+function compute_cell_box_filter_weights_and_indices_periodic_variable_resolution(width_func::F, c_position, areaCell, cellsOnCell::AbstractVector{<:SmallVector{N_MAX}}, verticesOnCell, v_position, xp::Number, yp::Number) where {F <: Function, N_MAX}
     nCells = length(areaCell)
-    w = zeros(eltype(areaCell), 255, nCells) # I'm assuming the filtering stencil won't be larger than 255, which is the maximum number of elements supported by ImmutableVectors
+    w = zeros(eltype(areaCell), 255, nCells) # I'm assuming the filtering stencil won't be larger than 255, which is the maximum number of elements supported by SmallCollections
     width = zeros(eltype(areaCell), nCells)
     IT = eltype(eltype(cellsOnCell))
     inds = zeros(IT, 255, nCells)

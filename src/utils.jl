@@ -31,8 +31,8 @@ end
 @inline simd_length(::Type{Vec2Dxy{T}}) where {T} = 64 ÷ sizeof(T)
 
 @inline simd_repeat(t::Val, v::Number) = sd.Vec(ntuple(i -> v, t)...)
-@inline simd_repeat(t::Val, v::NTuple{N}) where {N} = map(simd_repeat, ntuple(i -> t, Val{N}()), v)
-@inline simd_repeat(t::Val, v::ImmutableVector{N}) where {N} = map(simd_repeat, (@inbounds ImmutableVector(ntuple(i -> t, Val{N}()), v.length)), v)
+@inline simd_repeat(t::Val, v::FixedVector{N}) where {N} = map(simd_repeat, FixedVector(ntuple(i -> t, Val{N}())), v)
+@inline simd_repeat(t::Val, v::SmallVector{N}) where {N} = map(simd_repeat, (@inbounds SmallVector(FixedVector(ntuple(i -> t, Val{N}())), v.n)), v)
 @inline simd_repeat(t::Val, v::Vec2Dxy) = Vec(x = sd.Vec(ntuple(i -> v.x, t)...), y = sd.Vec(ntuple(i -> v.y, t)...))
 @inline simd_repeat(t::Val, v::Vec3D) = Vec(x = sd.Vec(ntuple(i -> v.x, t)...), y = sd.Vec(ntuple(i -> v.y, t)...), z = sd.Vec(ntuple(i -> v.z, t)...))
 
@@ -50,15 +50,15 @@ end
     return simd_range, serial_range
 end
 
-@inline function mean_sum(input_field, ind::NTuple{N, T}, op::F = Base.identity) where {F <: Function, T <: Integer, N}
+@inline function mean_sum(input_field, ind::FixedVector{N, T}, op::F = Base.identity) where {F <: Function, T <: Integer, N}
     mapreduce(@inline(x -> @inline(op(@inbounds(input_field[x])))), +, ind) / N
 end
 
-@inline function mean_sum(input_field, ind::NTuple{N, T}, k::IntOrVecRange, op::F = Base.identity) where {F <: Function, T <: Integer, N}
+@inline function mean_sum(input_field, ind::FixedVector{N, T}, k::IntOrVecRange, op::F = Base.identity) where {F <: Function, T <: Integer, N}
     mapreduce(@inline(x -> @inline(op(@inbounds(input_field[k, x])))), +, ind) / N
 end
 
-@inline function mean_sum(input_field, ind::NTuple{N, T}, k::IntOrVecRange, t::Integer, op::F = Base.identity) where {F <: Function, T <: Integer, N}
+@inline function mean_sum(input_field, ind::FixedVector{N, T}, k::IntOrVecRange, t::Integer, op::F = Base.identity) where {F <: Function, T <: Integer, N}
     mapreduce(@inline(x -> @inline(op(@inbounds(input_field[k, x, t])))), +, ind) / N
 end
 
@@ -202,31 +202,31 @@ end
 #    return ntuple(i -> t[i + 1], Val{N - 1}())
 #end
 
-@inline function droplast(t::NTuple{N}) where {N}
-    return ntuple(@inline(i -> @inbounds(t[i])), Val{N - 1}())
+@inline function droplast(t::FixedVector{N}) where {N}
+    return FixedVector(ntuple(@inline(i -> @inbounds(t[i])), Val{N - 1}()))
 end
 
-@inbounds @inline function weighted_sum(input_field::AbstractVector, weights::NTuple{2}, indices::NTuple{2}, op::F = Base.identity) where {F <: Function}
+@inbounds @inline function weighted_sum(input_field::AbstractVector, weights::FixedVector{2}, indices::FixedVector{2}, op::F = Base.identity) where {F <: Function}
     muladd(weights[2], @inline(op(input_field[indices[2]])), weights[1] * @inline(op(input_field[indices[1]])))
 end
 
-@inbounds @inline function weighted_sum(input_field::AbstractMatrix, weights::NTuple{2}, indices::NTuple{2}, k::IntOrVecRange, op::F = Base.identity) where {F <: Function}
+@inbounds @inline function weighted_sum(input_field::AbstractMatrix, weights::FixedVector{2}, indices::FixedVector{2}, k::IntOrVecRange, op::F = Base.identity) where {F <: Function}
     muladd(weights[2], @inline(op(input_field[k, indices[2]])), weights[1] * @inline(op(input_field[k, indices[1]])))
 end
 
-@inbounds @inline function weighted_sum(input_field::AbstractArray{<:Any, 3}, weights::NTuple{2}, indices::NTuple{2}, k::IntOrVecRange, t::Integer, op::F = Base.identity) where {F <: Function}
+@inbounds @inline function weighted_sum(input_field::AbstractArray{<:Any, 3}, weights::FixedVector{2}, indices::FixedVector{2}, k::IntOrVecRange, t::Integer, op::F = Base.identity) where {F <: Function}
     muladd(weights[2], @inline(op(input_field[k, indices[2], t])), weights[1] * @inline(op(input_field[k, indices[1], t])))
 end
 
-@inbounds @inline function weighted_sum(input_field::AbstractVector, weights::NTuple{N}, indices::NTuple{N}, op::F = Base.identity) where {N, F <: Function}
+@inbounds @inline function weighted_sum(input_field::AbstractVector, weights::FixedVector{N}, indices::FixedVector{N}, op::F = Base.identity) where {N, F <: Function}
     @inbounds muladd(weights[N], @inline(op(input_field[indices[N]])), weighted_sum(input_field, droplast(weights), droplast(indices), op))
 end
 
-@inbounds @inline function weighted_sum(input_field::AbstractMatrix, weights::NTuple{N}, indices::NTuple{N}, k::IntOrVecRange, op::F = Base.identity) where {N, F <: Function}
+@inbounds @inline function weighted_sum(input_field::AbstractMatrix, weights::FixedVector{N}, indices::FixedVector{N}, k::IntOrVecRange, op::F = Base.identity) where {N, F <: Function}
     @inbounds muladd(weights[N], @inline(op(input_field[k, indices[N]])), weighted_sum(input_field, droplast(weights), droplast(indices), k, op))
 end
 
-@inbounds @inline function weighted_sum(input_field::AbstractArray{<:Any, 3}, weights::NTuple{N}, indices::NTuple{N}, k::IntOrVecRange, t::Integer, op::F = Base.identity) where {N, F <: Function}
+@inbounds @inline function weighted_sum(input_field::AbstractArray{<:Any, 3}, weights::FixedVector{N}, indices::FixedVector{N}, k::IntOrVecRange, t::Integer, op::F = Base.identity) where {N, F <: Function}
     @inbounds muladd(weights[N], @inline(op(input_field[k, indices[N], t])), weighted_sum(input_field, droplast(weights), droplast(indices), k, t, op))
 end
 

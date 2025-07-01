@@ -29,8 +29,8 @@ name_output(::CellKineticEnergyReconstruction) = "cell"
 
 struct CellKineticEnergyRingler{N_MAX, TI, TF} <: CellKineticEnergyReconstruction{N_MAX, TI, TF}
     n::Int
-    indices::ImVecArray{N_MAX, TI, 1}
-    weights::ImVecArray{N_MAX, TF, 1}
+    indices::SmVecArray{N_MAX, TI, 1}
+    weights::SmVecArray{N_MAX, TF, 1}
 end
 
 function CellKineticEnergyRingler(cells, edges)
@@ -45,8 +45,8 @@ name_output(::VertexKineticEnergyReconstruction) = "vertex"
 
 struct VertexKineticEnergyGassmann{TI, TF} <: VertexKineticEnergyReconstruction{TI, TF}
     n::Int
-    indices::Vector{NTuple{3, TI}}
-    weights::Vector{NTuple{3, TF}}
+    indices::Vector{FixedVector{3, TI}}
+    weights::Vector{FixedVector{3, TF}}
 end
 
 function compute_weights_vertex_kinetic_energy!(w, aV, Le, dc, edgesOnVertex)
@@ -65,7 +65,7 @@ function compute_weights_vertex_kinetic_energy!(w, aV, Le, dc, edgesOnVertex)
 end
 
 function compute_weights_vertex_kinetic_energy(aV, Le, dc, edgesOnVertex)
-    w = Vector{NTuple{3, eltype(aV)}}(undef, length(edgesOnVertex))
+    w = Vector{FixedVector{3, eltype(aV)}}(undef, length(edgesOnVertex))
     return compute_weights_vertex_kinetic_energy!(w, aV, Le, dc, edgesOnVertex)
 end
 

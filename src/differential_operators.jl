@@ -3,7 +3,7 @@ abstract type DifferentialOperator <: LinearVoronoiOperator end
 struct GradientAtEdge{TI, TF} <: DifferentialOperator
     n::Int
     dc::Vector{TF}
-    indices::Vector{NTuple{2, TI}}
+    indices::Vector{FixedVector{2, TI}}
 end
 
 name_input(::GradientAtEdge) = "cell"
@@ -248,31 +248,32 @@ abstract type CellDiv{TI, TF} <: DifferentialOperator end
 
 struct DivAtCell{N_MAX, TI, TF} <: CellDiv{TI, TF}
     n::Int
-    indices::ImVecArray{N_MAX, TI, 1}
-    weights::Vector{ImmutableVector{N_MAX, TF}}
+    indices::SmVecArray{N_MAX, TI, 1}
+    weights::SmVecArray{N_MAX, TF, 1}
 end
 
 name_input(::DivAtCell) = "edge"
 name_output(::DivAtCell) = "cell"
 
-function compute_div_at_cell_weights(areaCell, edgesOnCell::AbstractVector{<:ImmutableVector{N_MAX}}, dvEdge::AbstractVector{T}, cellsOnEdge) where {N_MAX, T}
-    w = Vector{ImmutableVector{N_MAX, T}}(undef, length(areaCell))
-    aux = Vector{T}(undef, N_MAX)
+function compute_div_at_cell_weights(areaCell, edgesOnCell::AbstractVector{<:SmallVector{N_MAX}}, dvEdge::AbstractVector{T}, cellsOnEdge) where {N_MAX, T}
+    w = Vector{FixedVector{N_MAX, T}}(undef, length(areaCell))
 
-    @inbounds for c in eachindex(areaCell)
-        inv_a = inv(areaCell[c])
+    @batch for c in eachindex(areaCell)
+        @inbounds begin
+            inv_a = inv(areaCell[c])
 
-        fill!(aux, zero(T))
-        eoc = edgesOnCell[c]
-        l = length(eoc)
-        for i in Base.OneTo(l)
-            e = eoc[i]
-            Le = dvEdge[e]
-            aux[i] = Le * inv_a * VoronoiMeshes.sign_edge(cellsOnEdge[e], c)
+            eoc = edgesOnCell[c]
+            l = length(eoc)
+            aux = SmallVector{N_MAX, T}()
+            for i in Base.OneTo(l)
+                e = eoc[i]
+                Le = dvEdge[e]
+                aux = push(aux, Le * inv_a * VoronoiMeshes.sign_edge(cellsOnEdge[e], c))
+            end
+            w[c] = fixedvector(aux)
         end
-        w[c] = ImmutableVector{N_MAX}(ntuple(j -> getindex(aux, j), Val{N_MAX}()), l)
     end
-    return w
+    return SmallVectorArray(w, edgesOnCell.length)
 end
 
 function DivAtCell(mesh::AbstractVoronoiMesh)
@@ -282,8 +283,8 @@ end
 
 struct CurlAtVertex{TI, TF} <: DifferentialOperator
     n::Int
-    weights::Vector{NTuple{3, TF}}
-    indices::Vector{NTuple{3, TI}}
+    weights::Vector{FixedVector{3, TF}}
+    indices::Vector{FixedVector{3, TI}}
 end
 
 name_input(::CurlAtVertex) = "edge"
@@ -331,15 +332,15 @@ function compute_rotational_at_vertex_weights!(weights, areaVertex, dc, edgesOnV
 end
 
 function compute_rotational_at_vertex_weights(areaVertex, dc, edgesOnVertex, cellsOnVertex, cellsOnEdge)
-    weights = similar(areaVertex, NTuple{3, Base.promote_op(/, eltype(dc), eltype(areaVertex))})
+    weights = similar(areaVertex, FixedVector{3, Base.promote_op(/, eltype(dc), eltype(areaVertex))})
     return compute_rotational_at_vertex_weights!(weights, areaVertex, dc, edgesOnVertex, cellsOnVertex, cellsOnEdge)
 end
 
 CurlAtVertex(mesh::AbstractVoronoiMesh) = CurlAtVertex(mesh.edges.n, compute_rotational_at_vertex_weights(mesh.vertices.area, mesh.edges.lengthDual, mesh.vertices.edges, mesh.vertices.cells, mesh.edges.cells), mesh.vertices.edges)
 
 struct CurlAtEdge{TI, TF} <: DifferentialOperator
-    weights::Vector{NTuple{4, TF}}
-    indices::Vector{NTuple{4, TI}}
+    weights::Vector{FixedVector{4, TF}}
+    indices::Vector{FixedVector{4, TI}}
 end
 
 n_input(a::CurlAtEdge) = n_output(a)
@@ -347,7 +348,7 @@ n_input(a::CurlAtEdge) = n_output(a)
 name_input(::CurlAtEdge) = "edge"
 name_output(::CurlAtEdge) = "edge"
 
-function find_other_edge_that_shares_cell(e::Integer, edges::NTuple{3}, c::Integer, cellsOnEdge)
+function find_other_edge_that_shares_cell(e::Integer, edges::FixedVector{3}, c::Integer, cellsOnEdge)
     i = findfirst(x -> ((x != e) && (c in cellsOnEdge[x])), edges)
     isnothing(i) && error("Couldn't find edge in $edges that share cell $c with $e.")
     return edges[i]
@@ -385,8 +386,8 @@ function compute_rotational_at_edge_weights!(weights, indices, areaVertex, dc, e
 end
 
 function compute_rotational_at_edge_weights(areaVertex, dc, edgesOnVertex, cellsOnEdge, verticesOnEdge)
-    weights = similar(dc, NTuple{4, Base.promote_op(/, eltype(dc), eltype(areaVertex))})
-    indices = similar(dc, NTuple{4, eltype(eltype(edgesOnVertex))})
+    weights = similar(dc, FixedVector{4, Base.promote_op(/, eltype(dc), eltype(areaVertex))})
+    indices = similar(dc, FixedVector{4, eltype(eltype(edgesOnVertex))})
     return compute_rotational_at_edge_weights!(weights, indices, areaVertex, dc, edgesOnVertex, cellsOnEdge, verticesOnEdge)
 end
 

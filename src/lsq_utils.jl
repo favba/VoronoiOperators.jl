@@ -1,3 +1,7 @@
+_capacity(::Type{<:FixedVector{N}}) where {N} = N
+_capacity(::Type{<:SmallVector{N}}) where {N} = N
+_capacity(a) = _capacity(typeof(a))
+
 @inline function compute_weights_lsq2(bpos::VecND{TF}, elements_pos, 𝐢::Vec, 𝐣::Vec) where {TF}
     @inbounds begin
     nElem = length(elements_pos)
@@ -15,8 +19,8 @@
     MpM = cholesky!(Hermitian(M'*M))
     P = LinearAlgebra.inv!(MpM)*M'
 
-    N = max_length(elements_pos)
-    wvec = map(x -> @inbounds(P[1, x]), ImmutableVector{N}(Base.OneTo(nElem)))
+    N = _capacity(elements_pos)
+    wvec = map(x -> @inbounds(P[1, x]), SmallVector{N}(Base.OneTo(nElem)))
     end #inbounds
 
     return wvec
@@ -57,18 +61,18 @@ end
     end
 
     P = LinearAlgebra.inv!(cholesky!(MpM))*M'
-    N = max_length(elements_pos)
-    wvec = map(x -> @inbounds(P[1, x]), ImmutableVector{N}(Base.OneTo(nElem)))
+    N = _capacity(elements_pos)
+    wvec = map(x -> @inbounds(P[1, x]), SmallVector{N}(Base.OneTo(nElem)))
     end #inbounds
 
     return wvec
 end
 
 @inline _data(w) = w
-@inline _data(w::ImVecArray) = w.data
+@inline _data(w::SmVecArray) = w.data
 
-@inline _pad_with_zero(::Type{ImmutableVector{NE, TF}}, wvec) where {NE, TF} = padwith(ImmutableVector{NE, TF}(wvec), zero(TF)).data
-@inline _pad_with_zero(::Type{NTuple{N, TF}}, wvec) where {N, TF} = ntuple(i->@inbounds(wvec[i]), Val{N}())
+@inline _get_data(::Type{SmallVector{NE, TF}}, wvec) where {NE, TF} = fixedvector(wvec)
+@inline _get_data(::Type{FixedVector{N, TF}}, wvec) where {N, TF} = wvec
 
 function compute_weights_lsq_periodic!(w::AbstractVector{TV}, basePos, elemPos, elemOnBase, xp::Number, yp::Number, lsq_func::F) where {TV, F}
 
@@ -83,7 +87,7 @@ function compute_weights_lsq_periodic!(w::AbstractVector{TV}, basePos, elemPos, 
 
             @inline wvec = lsq_func(bpos, elements, 𝐢, 𝐣)
 
-            wdata[b] = _pad_with_zero(TV, wvec)
+            wdata[b] = _get_data(TV, wvec)
         end
     end
 
@@ -106,22 +110,22 @@ function compute_weights_lsq_spherical!(w::AbstractVector{TV}, basePos, elemPos,
             north_v = bpos_n × east_v
             @inline wvec = lsq_func(bpos_n, elements_proj, east_v, north_v)
 
-            wdata[b] = _pad_with_zero(TV, wvec)
+            wdata[b] = _get_data(TV, wvec)
         end
     end
 
     return w
 end
 
-function build_weight_vector(pos::VecArray, elemOnBase::ImVecArray{NE, TI, 1}) where {NE, TI}
+function build_weight_vector(pos::VecArray, elemOnBase::SmVecArray{NE, TI, 1}) where {NE, TI}
     TF = nonzero_eltype(eltype(pos))
-    w = ImmutableVectorArray(Vector{NTuple{NE,TF}}(undef, length(pos)), elemOnBase.length)
+    w = SmallVectorArray(Vector{FixedVector{NE,TF}}(undef, length(pos)), elemOnBase.length)
     return w
 end
 
-function build_weight_vector(pos::VecArray, ::AbstractVector{NTuple{NE, TI}}) where {NE, TI}
+function build_weight_vector(pos::VecArray, ::AbstractVector{FixedVector{NE, TI}}) where {NE, TI}
     TF = nonzero_eltype(eltype(pos))
-    w = Vector{NTuple{NE,TF}}(undef, length(pos))
+    w = Vector{FixedVector{NE,TF}}(undef, length(pos))
     return w
 end
 
@@ -151,8 +155,8 @@ end
     MpM = cholesky!(Hermitian(M'*M))
 
     P = LinearAlgebra.inv!(MpM)*M'
-    N = max_length(elements_normal)
-    wvec = map(x -> (@inbounds(P[1, x])*𝐢 + @inbounds(P[2, x])*𝐣), ImmutableVector{N}(Base.OneTo(nElem)))
+    N = _capacity(elements_normal)
+    wvec = map(x -> (@inbounds(P[1, x])*𝐢 + @inbounds(P[2, x])*𝐣), SmallVector{N}(Base.OneTo(nElem)))
     end #inbounds
 
     return wvec
@@ -169,7 +173,7 @@ function compute_weights_vec_lsq1_periodic!(w::AbstractVector{TV}, elemOnBase, e
 
             @inline wvec = compute_weights_vec_lsq1(elements_normals, 𝐢, 𝐣)
 
-            wdata[b] = _pad_with_zero(TV, wvec)
+            wdata[b] = _get_data(TV, wvec)
         end
     end
 
@@ -195,7 +199,7 @@ function compute_weights_vec_lsq1_spherical!(w::AbstractVector{TV}, basePos, ele
             north_v = bpos_n × east_v
             @inline wvec = compute_weights_vec_lsq1(elements_normal_proj, east_v, north_v)
 
-            wdata[b] = _pad_with_zero(TV, wvec)
+            wdata[b] = _get_data(TV, wvec)
         end
     end
 
@@ -236,8 +240,8 @@ end
 
     P = LinearAlgebra.inv!(cholesky!(MpM))*M'
 
-    N = max_length(elements_normal)
-    wvec = map(x -> (@inbounds(P[1, x])*𝐢 + @inbounds(P[2, x])*𝐣), ImmutableVector{N}(Base.OneTo(nElem)))
+    N = _capacity(elements_normal)
+    wvec = map(x -> (@inbounds(P[1, x])*𝐢 + @inbounds(P[2, x])*𝐣), SmallVector{N}(Base.OneTo(nElem)))
     end #inbounds
 
     return wvec
@@ -259,7 +263,7 @@ function compute_weights_vec_lsq2_periodic!(w::AbstractVector{TV}, basePos, elem
 
             @inline wvec = compute_weights_vec_lsq2(bpos, elements, elements_normal, 𝐢, 𝐣)
 
-            wdata[b] = _pad_with_zero(TV, wvec)
+            wdata[b] = _get_data(TV, wvec)
         end
     end
 
@@ -290,7 +294,7 @@ function compute_weights_vec_lsq2_spherical!(w::AbstractVector{TV}, basePos, ele
             north_v = bpos_n × east_v
             @inline wvec = compute_weights_vec_lsq2(bpos_n, elements_proj, elements_normal_proj, east_v, north_v)
 
-            wdata[b] = _pad_with_zero(TV, wvec)
+            wdata[b] = _get_data(TV, wvec)
         end
     end
 

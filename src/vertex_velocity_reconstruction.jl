@@ -4,15 +4,15 @@ name_output(::VertexVelocityReconstruction) = "vertex"
 
 struct VertexVelocityReconstructionPerot{TI, TF, TZ} <: VertexVelocityReconstruction{TI, TF, TZ}
     n::Int
-    indices::Vector{NTuple{3,TI}}
-    weights::Vector{NTuple{3, TensorsLite.VecMaybe2Dxy{TF,TZ}}}
+    indices::Vector{FixedVector{3,TI}}
+    weights::Vector{FixedVector{3, TensorsLite.VecMaybe2Dxy{TF,TZ}}}
 end
 
-function perot_velocity_reconstruction_from_tangent(vertices::ImmutableVector{N_MAX}, signEdge, base_point::Vec, base_normal::Vec) where {N_MAX}
+function perot_velocity_reconstruction_from_tangent(vertices::SmallVector{N_MAX}, signEdge, base_point::Vec, base_normal::Vec) where {N_MAX}
 
     inv_a = inv(area(vertices))
 
-    @inbounds w = ImmutableVector{N_MAX, typeof(base_point)}()
+    @inbounds w = SmallVector{N_MAX, typeof(base_point)}()
 
     l = length(vertices)
     vert1 = @inbounds(vertices[l])
@@ -27,7 +27,7 @@ function perot_velocity_reconstruction_from_tangent(vertices::ImmutableVector{N_
     return w
 end
 
-function compute_weights_perot_vertex_velocity_reconstruction_periodic!(w::AbstractVector{NTuple{3, Vec2Dxy{TF}}}, vertexPos, vertexEdgeSign, cellsOnVertex::AbstractVector{<:NTuple{3}}, cellPos, xp::Number, yp::Number) where {TF}
+function compute_weights_perot_vertex_velocity_reconstruction_periodic!(w::AbstractVector{FixedVector{3, Vec2Dxy{TF}}}, vertexPos, vertexEdgeSign, cellsOnVertex::AbstractVector{<:FixedVector{3}}, cellPos, xp::Number, yp::Number) where {TF}
 
     @parallel for v in eachindex(cellsOnVertex)
         @inbounds begin
@@ -35,21 +35,21 @@ function compute_weights_perot_vertex_velocity_reconstruction_periodic!(w::Abstr
 
         cov = cellsOnVertex[v]
 
-        points = ImmutableVector{3,Vec2Dxy{TF}}(map(i -> closest(vp, @inbounds(cellPos[i]), xp , yp), cov), UInt(3))
+        points = SmallVector{3,Vec2Dxy{TF}}(map(i -> closest(vp, @inbounds(cellPos[i]), xp , yp), cov), UInt(3))
         aux = perot_velocity_reconstruction_from_tangent(points, vertexEdgeSign[v], vp, 𝐤)
 
-        w[v] = aux.data
+        w[v] = fixedvector(aux)
         end #inbounds
     end
     return w
 end
 
 function compute_weights_perot_vertex_velocity_reconstruction(cells::Cells{false, NE, TI, TF}, vertices::Vertices{false, NE, TI, TF}) where {NE, TI, TF}
-    w = Vector{NTuple{3, Vec2Dxy{TF}}}(undef, vertices.n)
+    w = Vector{FixedVector{3, Vec2Dxy{TF}}}(undef, vertices.n)
     return compute_weights_perot_vertex_velocity_reconstruction_periodic!(w, vertices.position, vertices.edgesSign, vertices.cells, cells.position, cells.x_period, cells.y_period)
 end
 
-function compute_weights_perot_vertex_velocity_reconstruction_sphere!(w::AbstractVector{NTuple{3, Vec3D{TF}}}, R::Number, vertexPos, vertexEdgeSign, cellsOnVertex::AbstractVector{<:NTuple{3}}, cellPos) where {TF}
+function compute_weights_perot_vertex_velocity_reconstruction_sphere!(w::AbstractVector{FixedVector{3, Vec3D{TF}}}, R::Number, vertexPos, vertexEdgeSign, cellsOnVertex::AbstractVector{<:FixedVector{3}}, cellPos) where {TF}
 
     @parallel for v in eachindex(cellsOnVertex)
         @inbounds begin
@@ -57,18 +57,18 @@ function compute_weights_perot_vertex_velocity_reconstruction_sphere!(w::Abstrac
 
         cov = cellsOnVertex[v]
 
-        points = ImmutableVector{3,Vec3D{TF}}(map(i -> (@inbounds(cellPos[i]) / R), cov), UInt(3))
+        points = SmallVector{3,Vec3D{TF}}(map(i -> (@inbounds(cellPos[i]) / R), cov), UInt(3))
         points_projected = project_points_to_tangent_plane(1, vp, points)
         aux = perot_velocity_reconstruction_from_tangent(points_projected, vertexEdgeSign[v], vp, vp)
 
-        w[v] = aux.data
+        w[v] = fixedvector(aux)
         end #inbounds
     end
     return w
 end
 
 function compute_weights_perot_vertex_velocity_reconstruction(cells::Cells{true, NE, TI, TF}, vertices::Vertices{true, NE, TI, TF}) where {NE, TI, TF}
-    w = Vector{NTuple{3, Vec3D{TF}}}(undef, vertices.n)
+    w = Vector{FixedVector{3, Vec3D{TF}}}(undef, vertices.n)
     return compute_weights_perot_vertex_velocity_reconstruction_sphere!(w, cells.sphere_radius, vertices.position, vertices.edgesSign, vertices.cells, cells.position)
 end
 
@@ -81,20 +81,20 @@ VertexVelocityReconstructionPerot(mesh::AbstractVoronoiMesh) =
 
 struct VertexVelocityReconstructionLSq1{TI, TF, TZ} <: VertexVelocityReconstruction{TI, TF, TZ}
     n::Int
-    indices::Vector{NTuple{3, TI}}
-    weights::Vector{NTuple{3, Vec{Union{TF, TZ}, 1, TF, TF, TZ}}}
+    indices::Vector{FixedVector{3, TI}}
+    weights::Vector{FixedVector{3, Vec{Union{TF, TZ}, 1, TF, TF, TZ}}}
 end
 
 function VertexVelocityReconstructionLSq1(vertices::Vertices{false, NE, TI, TF}, edges::Edges) where {NE, TI, TF}
     edgesOnVertex = vertices.edges
-    weights = Vector{NTuple{3, Vec2Dxy{TF}}}(undef, vertices.n)
+    weights = Vector{FixedVector{3, Vec2Dxy{TF}}}(undef, vertices.n)
     compute_weights_vec_lsq1_periodic!(weights, edgesOnVertex, edges.normal)
     return VertexVelocityReconstructionLSq1(edges.n, edgesOnVertex, weights)
 end
 
 function VertexVelocityReconstructionLSq1(vertices::Vertices{true, NE, TI, TF}, edges::Edges) where {NE, TI, TF}
     edgesOnVertex = vertices.edges
-    weights =Vector{NTuple{3, Vec3D{TF}}}(undef, vertices.n)
+    weights =Vector{FixedVector{3, Vec3D{TF}}}(undef, vertices.n)
     compute_weights_vec_lsq1_spherical!(weights, vertices.position, edgesOnVertex, edges.normal, vertices.sphere_radius)
     return VertexVelocityReconstructionLSq1(edges.n, edgesOnVertex, weights)
 end
@@ -105,20 +105,20 @@ end
 
 struct VertexVelocityReconstructionLSq2{TI, TF, TZ} <: VertexVelocityReconstruction{TI, TF, TZ}
     n::Int
-    indices::Vector{NTuple{3, TI}}
-    weights::Vector{NTuple{3, Vec{Union{TF, TZ}, 1, TF, TF, TZ}}}
+    indices::Vector{FixedVector{3, TI}}
+    weights::Vector{FixedVector{3, Vec{Union{TF, TZ}, 1, TF, TF, TZ}}}
 end
 
 function VertexVelocityReconstructionLSq2(vertices::Vertices{false, NE, TI, TF}, edges::Edges) where {NE, TI, TF}
     edgesOnVertex = vertices.edges
-    weights = Vector{NTuple{3, Vec2Dxy{TF}}}(undef, vertices.n)
+    weights = Vector{FixedVector{3, Vec2Dxy{TF}}}(undef, vertices.n)
     compute_weights_vec_lsq2_periodic!(weights, vertices.position, edgesOnVertex, edges.position, edges.normal, vertices.x_period, vertices.y_period)
     return VertexVelocityReconstructionLSq2(edges.n, edgesOnVertex, weights)
 end
 
 function VertexVelocityReconstructionLSq2(vertices::Vertices{true, NE, TI, TF}, edges::Edges) where {NE, TI, TF}
     edgesOnVertex = vertices.edges
-    weights = Vector{NTuple{3, Vec3D{TF}}}(undef, vertices.n)
+    weights = Vector{FixedVector{3, Vec3D{TF}}}(undef, vertices.n)
     compute_weights_vec_lsq2_spherical!(weights, vertices.position, edgesOnVertex, edges.position, edges.normal, vertices.sphere_radius)
     return VertexVelocityReconstructionLSq2(edges.n, edgesOnVertex, weights)
 end

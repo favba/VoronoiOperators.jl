@@ -5,17 +5,17 @@ name_output(::VertexToCellTransformation) = "cell"
 
 struct VertexToCellArea{NEdges, TI, TF} <: VertexToCellTransformation{NEdges, TI, TF}
     n::Int
-    indices::ImVecArray{NEdges, TI, 1}
-    weights::ImVecArray{NEdges, TF, 1}
+    indices::SmVecArray{NEdges, TI, 1}
+    weights::SmVecArray{NEdges, TF, 1}
 end
 
-function compute_weights_vertex_to_cell_area!(w::ImVecArray{NE, TI, 1}, areaCell::AbstractVector{TF}, verticesOnCell, cellsOnVertex, kiteAreaOnVertex::AbstractVector{NTuple{3,TF}})  where {NE, TI, TF}
+function compute_weights_vertex_to_cell_area!(w::SmVecArray{NE, TI, 1}, areaCell::AbstractVector{TF}, verticesOnCell, cellsOnVertex, kiteAreaOnVertex::AbstractVector{FixedVector{3,TF}})  where {NE, TI, TF}
     wdata = w.data
 
     @batch for c in eachindex(areaCell)
         @inbounds begin
 
-            aux = ImmutableVector{NE,TF}()
+            aux = SmallVector{NE,TF}()
             A = areaCell[c]
 
             voc =verticesOnCell[c]
@@ -28,15 +28,15 @@ function compute_weights_vertex_to_cell_area!(w::ImVecArray{NE, TI, 1}, areaCell
             #fix any float point errors (aux should sum to 1)
             aux = aux .+ ((1 - sum(aux)) / l)
 
-            wdata[c] = padwith(aux, zero(TF)).data
+            wdata[c] = fixedvector(aux)
         end
     end
 
     return w
 end
 
-function compute_weights_vertex_to_cell_area(areaCell::AbstractVector{TF}, verticesOnCell::ImVecArray{NE, TI, 1}, cellsOnVertex, kiteAreaOnVertex) where {NE, TI, TF}
-    w = ImmutableVectorArray(Vector{NTuple{NE,TF}}(undef, length(areaCell)), verticesOnCell.length)
+function compute_weights_vertex_to_cell_area(areaCell::AbstractVector{TF}, verticesOnCell::SmVecArray{NE, TI, 1}, cellsOnVertex, kiteAreaOnVertex) where {NE, TI, TF}
+    w = SmallVectorArray(Vector{FixedVector{NE,TF}}(undef, length(areaCell)), verticesOnCell.length)
     return compute_weights_vertex_to_cell_area!(w, areaCell, verticesOnCell, cellsOnVertex, kiteAreaOnVertex)
 end
 
@@ -48,8 +48,8 @@ VertexToCellArea(m::AbstractVoronoiMesh) = VertexToCellArea(m.vertices.n, m.cell
 
 struct VertexToCellLSq2{NEdges, TI, TF} <: VertexToCellTransformation{NEdges, TI, TF}
     n::Int
-    indices::ImVecArray{NEdges, TI, 1}
-    weights::ImVecArray{NEdges, TF, 1}
+    indices::SmVecArray{NEdges, TI, 1}
+    weights::SmVecArray{NEdges, TF, 1}
 end
 
 compute_weights_vertex_to_cell_linear_interpolation(cells::Cells{false}, vertices::Vertices{false}) = compute_weights_lsq(cells.position, vertices.position, cells.vertices, cells.x_period, cells.y_period, compute_weights_lsq2)
@@ -62,8 +62,8 @@ VertexToCellLSq2(mesh::AbstractVoronoiMesh) = VertexToCellLSq2(mesh.cells, mesh.
 
 struct VertexToCellLSq3{NEdges, TI, TF} <: VertexToCellTransformation{NEdges, TI, TF}
     n::Int
-    indices::ImVecArray{NEdges, TI, 1}
-    weights::ImVecArray{NEdges, TF, 1}
+    indices::SmVecArray{NEdges, TI, 1}
+    weights::SmVecArray{NEdges, TF, 1}
 end
 
 compute_weights_vertex_to_cell_quadratic_interpolation(cells::Cells{false}, vertices::Vertices{false}) = compute_weights_lsq(cells.position, vertices.position, cells.vertices, cells.x_period, cells.y_period, compute_weights_lsq3)

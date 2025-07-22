@@ -203,8 +203,9 @@ const vertex_kinetic_energy = (vertex_Vec_field .⋅ vertex_Vec_field) ./ 2
                     fieldk = kR(ueND)
                     @test all(isapprox(25.0), kR(fieldk, +, ueND))
 
-                    if typeof(uR) <: CellVelocityReconstructionPerot
-                        kvR = VertexKineticEnergyPerot(mesh)
+                    for kvR in (VertexKineticEnergyPerot(mesh),
+                                VertexKineticEnergyVelRecon(VertexVelocityReconstructionLSq1(mesh)),
+                                VertexKineticEnergyVelRecon(VertexVelocityReconstructionLSq2(mesh)))
                         kRR = CellKineticEnergyVertexWeighted(kvR, kR, vtc)
 
                         @test all(isapprox(12.5), kRR(ueND))
@@ -258,8 +259,9 @@ const vertex_kinetic_energy = (vertex_Vec_field .⋅ vertex_Vec_field) ./ 2
             @test all(x -> isapprox(x[1], x[2], rtol = 1e-3, atol= 1e-30), zip(cell_kinetic_energy, fieldk))
             @test all(x -> isapprox(2*x[1], x[2], rtol = 1e-3, atol = 2e-30), zip(cell_kinetic_energy, kR(fieldk, +, ueND)))
 
-            if typeof(uR) <: CellVelocityReconstructionPerot
-                kvR = VertexKineticEnergyPerot(mesh)
+           for kvR in (VertexKineticEnergyPerot(mesh),
+                       VertexKineticEnergyVelRecon(VertexVelocityReconstructionLSq1(mesh)),
+                       VertexKineticEnergyVelRecon(VertexVelocityReconstructionLSq2(mesh)))
                 kRR = CellKineticEnergyVertexWeighted(kvR, kR, vtc)
 
                 fieldk = kRR(ueND)

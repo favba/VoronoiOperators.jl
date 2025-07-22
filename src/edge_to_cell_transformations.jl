@@ -9,6 +9,8 @@ struct EdgeToCellRingler{NEdges, TI, TF} <: EdgeToCellTransformation{NEdges, TI,
     weights::SmVecArray{NEdges, TF, 1}
 end
 
+method_name(::Type{<:EdgeToCellRingler}) = "Ringler"
+
 function compute_weights_edge_to_cell_ringler!(w::SmVecArray{NE, TF, 1}, areaCell, dcEdge, dvEdge, edgesOnCell) where {NE, TF}
 
     wdata = w.data
@@ -50,6 +52,8 @@ struct EdgeToCellArea{NEdges, TI, TF} <: EdgeToCellTransformation{NEdges, TI, TF
     indices::SmVecArray{NEdges, TI, 1}
     weights::SmVecArray{NEdges, TF, 1}
 end
+
+method_name(::Type{<:EdgeToCellArea}) = "Area"
 
 EdgeToCellArea(cells::Cells{false}, edges::Edges{false}, ::Vertices{false}) = EdgeToCellArea(edges.n, cells.edges, compute_weights_edge_to_cell_ringler(cells, edges))
 
@@ -102,6 +106,8 @@ struct EdgeToCellLSq2{NEdges, TI, TF} <: EdgeToCellTransformation{NEdges, TI, TF
     weights::SmVecArray{NEdges, TF, 1}
 end
 
+method_name(::Type{<:EdgeToCellLSq2}) = "LSq2"
+
 compute_weights_edge_to_cell_linear_interpolation(cells::Cells{false}, edges::Edges{false}) = compute_weights_lsq(cells.position, edges.position, cells.edges, cells.x_period, cells.y_period, compute_weights_lsq2)
 
 compute_weights_edge_to_cell_linear_interpolation(cells::Cells{true}, edges::Edges{true}) = compute_weights_lsq(cells.position, edges.position, cells.edges, cells.sphere_radius, compute_weights_lsq2)
@@ -115,6 +121,8 @@ struct EdgeToCellLSq3{NEdges, TI, TF} <: EdgeToCellTransformation{NEdges, TI, TF
     indices::SmVecArray{NEdges, TI, 1}
     weights::SmVecArray{NEdges, TF, 1}
 end
+
+method_name(::Type{<:EdgeToCellLSq3}) = "LSq3"
 
 compute_weights_edge_to_cell_quadratic_interpolation(cells::Cells{false}, edges::Edges{false}) = compute_weights_lsq(cells.position, edges.position, cells.edges, cells.x_period, cells.y_period, compute_weights_lsq3)
 

@@ -11,8 +11,6 @@ export VertexToEdgeTransformation, VertexToEdgeMean, VertexToEdgeInterpolation, 
 export EdgeToCellTransformation, EdgeToCellRingler, EdgeToCellArea, EdgeToCellLSq2, EdgeToCellLSq3
 export VertexToCellTransformation, VertexToCellArea, VertexToCellLSq2, VertexToCellLSq3
 export CellToEdgeTransformation, CellToEdgeMean, CellToEdgeBaricentric
-export VecCellToEdgeTransformation
-export VecCellToEdgeMean
 export CellVelocityReconstruction, CellVelocityReconstructionPerot, CellVelocityReconstructionLSq1, CellVelocityReconstructionLSq2
 export VertexVelocityReconstruction, VertexVelocityReconstructionPerot, VertexVelocityReconstructionLSq1, VertexVelocityReconstructionLSq2
 export CellKineticEnergyMPAS, CellKineticEnergyRingler, CellKineticEnergyVelRecon, CellKineticEnergyPerot, CellKineticEnergyPerotWeighted, CellKineticEnergyVertexWeighted
@@ -20,8 +18,11 @@ export VertexKineticEnergyReconstruction, VertexKineticEnergyVelRecon, VertexKin
 export GradientAtEdge, DivAtCell, CurlAtVertex, CurlAtEdge
 export CellBoxFilter
 export TangentialVelocityReconstruction, TangentialVelocityReconstructionThuburn, TangentialVelocityReconstructionPeixoto, TangentialVelocityReconstructionVelRecon
+export method_name
 
 export DivCellScalarU
+
+method_name(a) = method_name(typeof(a))
 
 include("utils.jl")
 include("lsq_utils.jl")

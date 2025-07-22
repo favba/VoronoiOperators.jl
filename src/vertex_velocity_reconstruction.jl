@@ -8,6 +8,8 @@ struct VertexVelocityReconstructionPerot{TI, TF, TZ} <: VertexVelocityReconstruc
     weights::Vector{FixedVector{3, TensorsLite.VecMaybe2Dxy{TF,TZ}}}
 end
 
+method_name(::Type{<:VertexVelocityReconstructionPerot}) = "Perot"
+
 function perot_velocity_reconstruction_from_tangent(vertices::SmallVector{N_MAX}, signEdge, base_point::Vec, base_normal::Vec) where {N_MAX}
 
     inv_a = inv(area(vertices))
@@ -85,6 +87,8 @@ struct VertexVelocityReconstructionLSq1{TI, TF, TZ} <: VertexVelocityReconstruct
     weights::Vector{FixedVector{3, Vec{Union{TF, TZ}, 1, TF, TF, TZ}}}
 end
 
+method_name(::Type{<:VertexVelocityReconstructionLSq1}) = "LSq1"
+
 function VertexVelocityReconstructionLSq1(vertices::Vertices{false, NE, TI, TF}, edges::Edges) where {NE, TI, TF}
     edgesOnVertex = vertices.edges
     weights = Vector{FixedVector{3, Vec2Dxy{TF}}}(undef, vertices.n)
@@ -108,6 +112,8 @@ struct VertexVelocityReconstructionLSq2{TI, TF, TZ} <: VertexVelocityReconstruct
     indices::Vector{FixedVector{3, TI}}
     weights::Vector{FixedVector{3, Vec{Union{TF, TZ}, 1, TF, TF, TZ}}}
 end
+
+method_name(::Type{<:VertexVelocityReconstructionLSq2}) = "LSq2"
 
 function VertexVelocityReconstructionLSq2(vertices::Vertices{false, NE, TI, TF}, edges::Edges) where {NE, TI, TF}
     edgesOnVertex = vertices.edges

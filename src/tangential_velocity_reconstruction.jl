@@ -8,6 +8,8 @@ struct TangentialVelocityReconstructionThuburn{N_MAX, TI, TF} <: TangentialVeloc
     weights::SmVecArray{N_MAX, TF, 1}
 end
 
+method_name(::Type{<:TangentialVelocityReconstructionThuburn}) = "Thuburn"
+
 function compute_weightsOnEdge_trisk!(edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}}, weightsOnEdge::AbstractVector{<:SmallVector{NE, TF}}, cellsOnEdge, verticesOnCell, edgesOnCell, dcEdge, dvEdge, kiteAreasOnVertex, cellsOnVertex, nEdgesOnCell, areaCell) where {NE, TI, TF}
 
     @parallel for e in eachindex(cellsOnEdge)
@@ -80,6 +82,8 @@ struct TangentialVelocityReconstructionPeixoto{N_MAX, TI, TF} <: TangentialVeloc
     indices::SmVecArray{N_MAX, TI, 1}
     weights::SmVecArray{N_MAX, TF, 1}
 end
+
+method_name(::Type{<:TangentialVelocityReconstructionPeixoto}) = "Peixoto"
 
 function compute_weightsOnEdge_Peixoto_periodic!(
             edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}},
@@ -309,7 +313,10 @@ end
 struct TangentialVelocityReconstructionVelRecon{N_MAX, TI, TF} <: TangentialVelocityReconstruction{N_MAX, TI, TF}
     indices::SmVecArray{N_MAX, TI, 1}
     weights::SmVecArray{N_MAX, TF, 1}
+    method_name::String
 end
+
+method_name(L::TangentialVelocityReconstructionVelRecon) = string("cellRecon_", L.method_name,"_mean")
 
 function compute_tangential_weightsOnEdge_velRecon_periodic!(
         edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}},
@@ -441,6 +448,6 @@ function compute_tangential_weightsOnEdge_velRecon(cells::Cells, edges::Edges, v
 end
 
 function TangentialVelocityReconstructionVelRecon(mesh::AbstractVoronoiMesh, velRecon::CellVelocityReconstruction)
-    return TangentialVelocityReconstructionVelRecon(compute_tangential_weightsOnEdge_velRecon(mesh.cells, mesh.edges, velRecon)...)
+    return TangentialVelocityReconstructionVelRecon(compute_tangential_weightsOnEdge_velRecon(mesh.cells, mesh.edges, velRecon)..., method_name(velRecon))
 end
 

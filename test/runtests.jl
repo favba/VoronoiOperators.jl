@@ -428,6 +428,7 @@ end
         end
         for tvr in (TangentialVelocityReconstructionThuburn(mesh),
                     TangentialVelocityReconstructionPeixoto(mesh),
+                    TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionPerot(mesh)),
                     TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionLSq1(mesh)),
                     TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionLSq2(mesh)))
             for (utND, ueND) in ((ut1D, ue1D), (ut2D, ue2D), (ut3D, ue3D))
@@ -451,6 +452,9 @@ end
 
     tvlsq1 = TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionLSq1(mesh))
     @test all(map((x, y) -> isapprox(x, y; atol = 0.1), ut1D, tvlsq1(ue1D)))
+
+    tvlsq12 = TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionPerot(mesh))
+    @test all(map((x, y) -> isapprox(x, y; atol = 0.1), ut1D, tvlsq12(ue1D)))
 
     tvlsq2 = TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionLSq2(mesh))
     @test all(map((x, y) -> isapprox(x, y; atol = 0.1), ut1D, tvlsq2(ue1D)))

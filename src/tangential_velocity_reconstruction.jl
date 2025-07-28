@@ -78,6 +78,152 @@ function TangentialVelocityReconstructionThuburn(mesh::AbstractVoronoiMesh)
     return TangentialVelocityReconstructionThuburn(compute_weightsOnEdge_trisk(mesh)...)
 end
 
+struct TangentialVelocityReconstructionVelRecon{N_MAX, TI, TF} <: TangentialVelocityReconstruction{N_MAX, TI, TF}
+    indices::SmVecArray{N_MAX, TI, 1}
+    weights::SmVecArray{N_MAX, TF, 1}
+    method_name::String
+end
+
+method_name(L::TangentialVelocityReconstructionVelRecon) = string("cellRecon_", L.method_name,"_mean")
+
+function compute_tangential_weightsOnEdge_velRecon_periodic!(
+        edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}},
+        weightsOnEdge::AbstractVector{<:SmallVector{NE, TF}},
+        weightsCell, tangentEdge, edgesOnCell, cellsOnEdge
+    ) where {NE, TI, TF}
+
+    wdata = weightsOnEdge.data
+
+    @parallel for e in eachindex(tangentEdge)
+    @inbounds begin
+        c1, c2 = cellsOnEdge[e]
+        te = tangentEdge[e]
+
+        eoc1 = edgesOnCell[c1]
+        wc1 = weightsCell[c1]
+        #rotation needed such that circshift(eoc1, rot1)[1] == e
+        rot1 = length(eoc1) + 1 - findfirst(isequal(e), eoc1)::Int
+        wc1 = circshift(wc1, rot1)
+
+        ip1 = circshift(eoc1, rot1)[2:end]
+        wp1 = map(x -> x ⋅ te, @inbounds(wc1[2:end]))
+
+        we = SmallVector{NE,TF}()
+        ie = SmallVector{NE,TI}()
+        for i in eachindex(wp1)
+            we = @inbounds push(we, wp1[i] / 2)
+            ie = @inbounds push(ie, ip1[i])
+        end
+
+        eoc2 = edgesOnCell[c2]
+        wc2 = weightsCell[c2]
+        rot2 = length(eoc2) + 1 - findfirst(isequal(e), eoc2)::Int
+        wc2 = circshift(wc2, rot2)
+
+        ip2 = circshift(eoc2, rot2)[2:end]
+        wp2 = map(x -> x ⋅ te, @inbounds(wc2[2:end]))
+
+        for i in eachindex(wp2)
+            we = @inbounds push(we, wp2[i] / 2)
+            ie = @inbounds push(ie, ip2[i])
+        end
+
+        wdata[e] = fixedvector(we)
+        edgesOnEdge[e] = ie
+    end
+    end
+
+    return edgesOnEdge, weightsOnEdge
+end
+
+function compute_tangential_weightsOnEdge_velRecon!(cells::Cells{false}, ::Vertices{false}, edges::Edges{false}, velRecon::CellVelocityReconstruction, indices, weights)
+    return compute_tangential_weightsOnEdge_velRecon_periodic!(
+            indices,
+            weights,
+            velRecon.weights, edges.tangent, cells.edges, edges.cells
+        )
+end
+
+function compute_tangential_weightsOnEdge_velRecon_spherical!(
+        edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}},
+        weightsOnEdge::AbstractVector{<:SmallVector{NE, TF}},
+        weightsCell, cellPos, vertexPos, verticesOnEdge, edgesOnCell, cellsOnEdge, R::Number
+    ) where {NE, TI, TF}
+
+    wdata = weightsOnEdge.data
+    
+    @parallel for e in eachindex(verticesOnEdge)
+    @inbounds begin
+        c1, c2 = cellsOnEdge[e]
+        v1, v2 = verticesOnEdge[e]
+
+        v1p = vertexPos[v1] / R
+        v2p = vertexPos[v2] / R
+
+        eoc1 = edgesOnCell[c1]
+        wc1 = weightsCell[c1]
+        #rotation needed such that circshift(eoc1, rot1)[1] == e
+        rot1 = length(eoc1) + 1 - findfirst(isequal(e), eoc1)::Int
+        wc1 = circshift(wc1, rot1)
+
+        c1p = cellPos[c1] / R
+        v1pp1, v2pp1 = project_points_to_tangent_plane(1, c1p, (v1p, v2p))
+        te1 = normalize(v2pp1 - v1pp1)
+
+        ip1 = circshift(eoc1, rot1)[2:end]
+        wp1 = map(x -> x ⋅ te1, @inbounds(wc1[2:end]))
+
+        we = SmallVector{NE,TF}()
+        ie = SmallVector{NE,TI}()
+        for i in eachindex(wp1)
+            we = @inbounds push(we, wp1[i] / 2)
+            ie = @inbounds push(ie, ip1[i])
+        end
+
+        eoc2 = edgesOnCell[c2]
+        wc2 = weightsCell[c2]
+        rot2 = length(eoc2) + 1 - findfirst(isequal(e), eoc2)::Int
+        wc2 = circshift(wc2, rot2)
+
+        c2p = cellPos[c2] / R
+        v1pp2, v2pp2 = project_points_to_tangent_plane(1, c2p, (v1p, v2p))
+        te2 = normalize(v2pp2 - v1pp2)
+
+        ip2 = circshift(eoc2, rot2)[2:end]
+        wp2 = map(x -> x ⋅ te2, @inbounds(wc2[2:end]))
+
+        for i in eachindex(wp2)
+            we = @inbounds push(we, wp2[i] / 2)
+            ie = @inbounds push(ie, ip2[i])
+        end
+
+        wdata[e] = fixedvector(we)
+        edgesOnEdge[e] = ie
+    end
+    end
+
+    return edgesOnEdge, weightsOnEdge
+end
+
+function compute_tangential_weightsOnEdge_velRecon!(cells::Cells{true}, vertices::Vertices{true}, edges::Edges{true}, velRecon::CellVelocityReconstruction, indices, weights)
+    return compute_tangential_weightsOnEdge_velRecon_spherical!(
+            indices,
+            weights,
+            velRecon.weights, cells.position, vertices.position, edges.vertices, cells.edges, edges.cells, cells.sphere_radius
+        )
+end
+
+function compute_tangential_weightsOnEdge_velRecon(cells::Cells, vertices::Vertices, edges::Edges, velRecon::CellVelocityReconstruction)
+    nEdgesOnEdge = maximum(x->(x[1] + x[2] - 2), ((a,inds) -> @inbounds((a[inds[1]], a[inds[2]]))).((cells.nEdges,), edges.cells))
+    indices =SmVecArray{nEdgesOnEdge, integer_type(edges)}(edges.n)
+    weights =SmallVectorArray(Vector{FixedVector{nEdgesOnEdge, float_type(cells)}}(undef, edges.n), indices.length)
+    return compute_tangential_weightsOnEdge_velRecon!(cells, vertices, edges, velRecon, indices, weights)
+end
+
+function TangentialVelocityReconstructionVelRecon(mesh::AbstractVoronoiMesh, velRecon::CellVelocityReconstruction)
+    return TangentialVelocityReconstructionVelRecon(compute_tangential_weightsOnEdge_velRecon(mesh.cells, mesh.vertices, mesh.edges, velRecon)..., method_name(velRecon))
+end
+
 struct TangentialVelocityReconstructionPeixoto{N_MAX, TI, TF} <: TangentialVelocityReconstruction{N_MAX, TI, TF}
     indices::SmVecArray{N_MAX, TI, 1}
     weights::SmVecArray{N_MAX, TF, 1}
@@ -308,151 +454,5 @@ end
 
 function TangentialVelocityReconstructionPeixoto(mesh::AbstractVoronoiMesh)
     return TangentialVelocityReconstructionPeixoto(compute_weightsOnEdge_Peixoto(mesh)...)
-end
-
-struct TangentialVelocityReconstructionVelRecon{N_MAX, TI, TF} <: TangentialVelocityReconstruction{N_MAX, TI, TF}
-    indices::SmVecArray{N_MAX, TI, 1}
-    weights::SmVecArray{N_MAX, TF, 1}
-    method_name::String
-end
-
-method_name(L::TangentialVelocityReconstructionVelRecon) = string("cellRecon_", L.method_name,"_mean")
-
-function compute_tangential_weightsOnEdge_velRecon_periodic!(
-        edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}},
-        weightsOnEdge::AbstractVector{<:SmallVector{NE, TF}},
-        weightsCell, tangentEdge, edgesOnCell, cellsOnEdge
-    ) where {NE, TI, TF}
-
-    wdata = weightsOnEdge.data
-
-    @parallel for e in eachindex(tangentEdge)
-    @inbounds begin
-        c1, c2 = cellsOnEdge[e]
-        te = tangentEdge[e]
-
-        eoc1 = edgesOnCell[c1]
-        wc1 = weightsCell[c1]
-        #rotation needed such that circshift(eoc1, rot1)[1] == e
-        rot1 = length(eoc1) + 1 - findfirst(isequal(e), eoc1)::Int
-        wc1 = circshift(wc1, rot1)
-
-        ip1 = circshift(eoc1, rot1)[2:end]
-        wp1 = map(x -> x ⋅ te, @inbounds(wc1[2:end]))
-
-        we = SmallVector{NE,TF}()
-        ie = SmallVector{NE,TI}()
-        for i in eachindex(wp1)
-            we = @inbounds push(we, wp1[i] / 2)
-            ie = @inbounds push(ie, ip1[i])
-        end
-
-        eoc2 = edgesOnCell[c2]
-        wc2 = weightsCell[c2]
-        rot2 = length(eoc2) + 1 - findfirst(isequal(e), eoc2)::Int
-        wc2 = circshift(wc2, rot2)
-
-        ip2 = circshift(eoc2, rot2)[2:end]
-        wp2 = map(x -> x ⋅ te, @inbounds(wc2[2:end]))
-
-        for i in eachindex(wp2)
-            we = @inbounds push(we, wp2[i] / 2)
-            ie = @inbounds push(ie, ip2[i])
-        end
-
-        wdata[e] = fixedvector(we)
-        edgesOnEdge[e] = ie
-    end
-    end
-
-    return edgesOnEdge, weightsOnEdge
-end
-
-function compute_tangential_weightsOnEdge_velRecon!(cells::Cells{false}, ::Vertices{false}, edges::Edges{false}, velRecon::CellVelocityReconstruction, indices, weights)
-    return compute_tangential_weightsOnEdge_velRecon_periodic!(
-            indices,
-            weights,
-            velRecon.weights, edges.tangent, cells.edges, edges.cells
-        )
-end
-
-function compute_tangential_weightsOnEdge_velRecon_spherical!(
-        edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}},
-        weightsOnEdge::AbstractVector{<:SmallVector{NE, TF}},
-        weightsCell, cellPos, vertexPos, verticesOnEdge, edgesOnCell, cellsOnEdge, R::Number
-    ) where {NE, TI, TF}
-
-    wdata = weightsOnEdge.data
-    
-    @parallel for e in eachindex(verticesOnEdge)
-    @inbounds begin
-        c1, c2 = cellsOnEdge[e]
-        v1, v2 = verticesOnEdge[e]
-
-        v1p = vertexPos[v1] / R
-        v2p = vertexPos[v2] / R
-
-        eoc1 = edgesOnCell[c1]
-        wc1 = weightsCell[c1]
-        #rotation needed such that circshift(eoc1, rot1)[1] == e
-        rot1 = length(eoc1) + 1 - findfirst(isequal(e), eoc1)::Int
-        wc1 = circshift(wc1, rot1)
-
-        c1p = cellPos[c1] / R
-        v1pp1, v2pp1 = project_points_to_tangent_plane(1, c1p, (v1p, v2p))
-        te1 = normalize(v2pp1 - v1pp1)
-
-        ip1 = circshift(eoc1, rot1)[2:end]
-        wp1 = map(x -> x ⋅ te1, @inbounds(wc1[2:end]))
-
-        we = SmallVector{NE,TF}()
-        ie = SmallVector{NE,TI}()
-        for i in eachindex(wp1)
-            we = @inbounds push(we, wp1[i] / 2)
-            ie = @inbounds push(ie, ip1[i])
-        end
-
-        eoc2 = edgesOnCell[c2]
-        wc2 = weightsCell[c2]
-        rot2 = length(eoc2) + 1 - findfirst(isequal(e), eoc2)::Int
-        wc2 = circshift(wc2, rot2)
-
-        c2p = cellPos[c2] / R
-        v1pp2, v2pp2 = project_points_to_tangent_plane(1, c2p, (v1p, v2p))
-        te2 = normalize(v2pp2 - v1pp2)
-
-        ip2 = circshift(eoc2, rot2)[2:end]
-        wp2 = map(x -> x ⋅ te2, @inbounds(wc2[2:end]))
-
-        for i in eachindex(wp2)
-            we = @inbounds push(we, wp2[i] / 2)
-            ie = @inbounds push(ie, ip2[i])
-        end
-
-        wdata[e] = fixedvector(we)
-        edgesOnEdge[e] = ie
-    end
-    end
-
-    return edgesOnEdge, weightsOnEdge
-end
-
-function compute_tangential_weightsOnEdge_velRecon!(cells::Cells{true}, vertices::Vertices{true}, edges::Edges{true}, velRecon::CellVelocityReconstruction, indices, weights)
-    return compute_tangential_weightsOnEdge_velRecon_spherical!(
-            indices,
-            weights,
-            velRecon.weights, cells.position, vertices.position, edges.vertices, cells.edges, edges.cells, cells.sphere_radius
-        )
-end
-
-function compute_tangential_weightsOnEdge_velRecon(cells::Cells, vertices::Vertices, edges::Edges, velRecon::CellVelocityReconstruction)
-    nEdgesOnEdge = maximum(x->(x[1] + x[2] - 2), ((a,inds) -> @inbounds((a[inds[1]], a[inds[2]]))).((cells.nEdges,), edges.cells))
-    indices =SmVecArray{nEdgesOnEdge, integer_type(edges)}(edges.n)
-    weights =SmallVectorArray(Vector{FixedVector{nEdgesOnEdge, float_type(cells)}}(undef, edges.n), indices.length)
-    return compute_tangential_weightsOnEdge_velRecon!(cells, vertices, edges, velRecon, indices, weights)
-end
-
-function TangentialVelocityReconstructionVelRecon(mesh::AbstractVoronoiMesh, velRecon::CellVelocityReconstruction)
-    return TangentialVelocityReconstructionVelRecon(compute_tangential_weightsOnEdge_velRecon(mesh.cells, mesh.vertices, mesh.edges, velRecon)..., method_name(velRecon))
 end
 

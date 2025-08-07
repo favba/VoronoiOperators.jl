@@ -17,7 +17,7 @@ VoronoiMeshes = "978c199f-fe38-4011-9fe6-317bc1cdd350"
 
 [compat]
 Polyester = "0.7.18"
-SmallCollections = "0.4.1"
+SmallCollections = "0.4.1, 0.5"
 StrideArraysCore = "0.5.7"
 VoronoiMeshes = "1.0.0"
 julia = "1.9"

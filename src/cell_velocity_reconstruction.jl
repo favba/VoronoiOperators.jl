@@ -135,3 +135,63 @@ function CellVelocityReconstructionLSq2(mesh::AbstractVoronoiMesh)
     CellVelocityReconstructionLSq2(mesh.cells, mesh.edges)
 end
 
+#Different from CellVelocityReconstructionPerot only on the sphere
+struct CellVelocityReconstructionPerotOld{N_MAX, TI, TF, TZ} <: CellVelocityReconstruction{N_MAX, TI, TF, TZ}
+    n::Int
+    indices::SmVecArray{N_MAX, TI, 1}
+    weights::SmVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
+end
+
+method_name(::Type{<:CellVelocityReconstructionPerotOld}) = "PerotOld"
+
+function CellVelocityReconstructionPerotOld(cells::Cells{false, N_MAX, TI, TF}, edges::Edges, vertices::Vertices, x_period::Number, y_period::Number) where {N_MAX, TI, TF}
+    edgesOnCell = cells.edges
+    weights =SmallVectorArray(Vector{FixedVector{N_MAX, Vec2Dxy{TF}}}(undef, cells.n), edgesOnCell.length)
+    compute_weights_perot_velocity_reconstruction_periodic!(weights, cells.position, vertices.position, cells.edgesSign, cells.vertices, x_period, y_period)
+    return CellVelocityReconstructionPerotOld(edges.n, edgesOnCell, weights)
+end
+
+function CellVelocityReconstructionPerotOld(mesh::AbstractVoronoiMesh{false})
+    CellVelocityReconstructionPerotOld(mesh.cells, mesh.edges, mesh.vertices, mesh.x_period, mesh.y_period)
+end
+
+function compute_weights_perotOld_velocity_reconstruction_spherical!(w::AbstractVector{SmallVector{N_MAX, T}}, R::Number, c_pos, areaCell, signEdges, edgesOnCell, e_mid_pos, edge_length) where {T, N_MAX}
+
+    wdata = w.data
+    @parallel for c in eachindex(edgesOnCell)
+        @inbounds begin
+        inv_a = inv(areaCell[c])
+        cp = c_pos[c]
+        cp_n = cp / R
+
+        eoc = edgesOnCell[c]
+
+        w = SmallVector{N_MAX, typeof(cp)}()
+        signEdge_c = signEdges[c]
+        l = length(eoc)
+        @inbounds for ei in Base.OneTo(l)
+            e = eoc[ei]
+            mid_point = e_mid_pos[e]
+            le = edge_length[e]
+            ve_c = mid_point - cp
+            ve_c_proj = ve_c - (ve_c ⋅ cp_n)*cp_n
+            w = push(w, (signEdge_c[ei] * inv_a * le) * ve_c_proj)
+        end
+
+        wdata[c] = fixedvector(w)
+        end #inbounds
+    end
+    return w
+end
+
+function CellVelocityReconstructionPerotOld(cells::Cells{true, N_MAX, TI, TF}, edges::Edges{true}, vertices::Vertices{true}) where {N_MAX, TI, TF}
+    edgesOnCell = cells.edges
+    weights =SmallVectorArray(Vector{FixedVector{N_MAX, Vec3D{TF}}}(undef, cells.n), edgesOnCell.length)
+    compute_weights_perotOld_velocity_reconstruction_spherical!(weights, cells.sphere_radius, cells.position, cells.area, cells.edgesSign, cells.edges, edges.midpoint, edges.length)
+    return CellVelocityReconstructionPerotOld(edges.n, edgesOnCell, weights)
+end
+
+function CellVelocityReconstructionPerotOld(mesh::AbstractVoronoiMesh{true})
+    CellVelocityReconstructionPerotOld(mesh.cells, mesh.edges, mesh.vertices)
+end
+

@@ -213,3 +213,9 @@ function CellKineticEnergyPerotWeighted(mesh::AbstractVoronoiMesh, alpha = 1 - 0
     T = float_type(typeof(mesh.cells))
     return CellKineticEnergyVertexWeighted(VertexKineticEnergyPerot(mesh), CellKineticEnergyPerot(mesh), VertexToCellArea(mesh), alpha, Ref{Vector{T}}(), Ref{Matrix{T}}(), Ref{Array{T, 3}}())
 end
+
+const CellKineticEnergyPerotOld{N_MAX, TI, TF, TZ} = CellKineticEnergyVelRecon{N_MAX, TI, TF, CellVelocityReconstructionPerotOld{N_MAX, TI, TF, TZ}}
+
+CellKineticEnergyPerotOld(mesh::AbstractVoronoiMesh) = CellKineticEnergyVelRecon(CellVelocityReconstructionPerotOld(mesh))
+
+

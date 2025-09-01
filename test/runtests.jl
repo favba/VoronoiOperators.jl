@@ -2,6 +2,7 @@ using TensorsLite, TensorsLiteGeometry, SmallCollections, LinearAlgebra
 using NCDatasets
 using VoronoiMeshes
 using VoronoiOperators
+using VoronoiOperators: CellVelocityReconstructionPerotOld
 using Test
 
 const mesh_iso = VoronoiMesh("mesh.nc")
@@ -249,7 +250,7 @@ const vertex_kinetic_energy = (vertex_Vec_field .⋅ vertex_Vec_field) ./ 2
     ueND = edge_Vec_field
     vtc = VertexToCellArea(mesh)
 
-    for uR in (CellVelocityReconstructionPerot(mesh), CellVelocityReconstructionLSq1(mesh), CellVelocityReconstructionLSq2(mesh))
+    for uR in (CellVelocityReconstructionPerot(mesh), CellVelocityReconstructionPerotOld(mesh),CellVelocityReconstructionLSq1(mesh), CellVelocityReconstructionLSq2(mesh))
         field = uR(ueND)
         @test all(x -> isapprox(x[1], x[2], rtol=1e-3, atol=1e-15), zip(cell_Vec_field, field))
         @test all(x -> isapprox(2*x[1], x[2], rtol=1e-3, atol=2e-15), zip(cell_Vec_field, uR(field, +, ueND)))

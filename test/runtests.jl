@@ -2,7 +2,7 @@ using TensorsLite, TensorsLiteGeometry, SmallCollections, LinearAlgebra
 using NCDatasets
 using VoronoiMeshes
 using VoronoiOperators
-using VoronoiOperators: CellVelocityReconstructionPerotOld
+using VoronoiOperators: CellVelocityReconstructionPerotOld, TangentialVelocityReconstructionPeixotoOld
 using Test
 
 const mesh_iso = VoronoiMesh("mesh.nc")
@@ -449,6 +449,9 @@ end
 
     tvp = TangentialVelocityReconstructionPeixoto(mesh)
     @test all(map((x, y) -> isapprox(x, y; atol = 0.1), ut1D, tvp(ue1D)))
+
+    tvpold = TangentialVelocityReconstructionPeixotoOld(mesh)
+    @test all(map((x, y) -> isapprox(x, y; atol = 0.1), ut1D, tvpold(ue1D)))
 
     tvlsq1 = TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionLSq1(mesh))
     @test all(map((x, y) -> isapprox(x, y; atol = 0.1), ut1D, tvlsq1(ue1D)))

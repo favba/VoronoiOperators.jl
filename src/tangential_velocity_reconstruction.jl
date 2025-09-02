@@ -21,7 +21,7 @@ function compute_weightsOnEdge_trisk!(edgesOnEdge::AbstractVector{<:SmallVector{
         inv_de = inv(dcEdge[e])
 
         inds_e_c1 = edgesOnCell[c1]
-        this_e_i = findfirst(isequal(e), inds_e_c1)
+        this_e_i = findfirst(isequal(e), inds_e_c1)::Int
         inds_e_c1_shifted = circshift(inds_e_c1, -this_e_i)
         vertices_c1_shifted = circshift(verticesOnCell[c1], -this_e_i)
         nEdges_c1 = nEdgesOnCell[c1]
@@ -38,7 +38,7 @@ function compute_weightsOnEdge_trisk!(edgesOnEdge::AbstractVector{<:SmallVector{
         end
 
         inds_e_c2 = edgesOnCell[c2]
-        this_e_i = findfirst(isequal(e), inds_e_c2)
+        this_e_i = findfirst(isequal(e), inds_e_c2)::Int
         inds_e_c2_shifted = circshift(inds_e_c2, -this_e_i)
         vertices_c2_shifted = circshift(verticesOnCell[c2], -this_e_i)
         nEdges_c2 = nEdgesOnCell[c2]
@@ -235,5 +235,125 @@ function TangentialVelocityReconstructionPeixoto(m::AbstractVoronoiMesh)
     cR = CellVelocityReconstructionPerot(m)
     tR_aux = TangentialVelocityReconstructionVelRecon(m, cR)
     return TangentialVelocityReconstructionPeixoto(tR_aux.indices, tR_aux.weights)
+end
+
+struct TangentialVelocityReconstructionPeixotoOld{N_MAX, TI, TF} <: TangentialVelocityReconstruction{N_MAX, TI, TF}
+    indices::SmVecArray{N_MAX, TI, 1}
+    weights::SmVecArray{N_MAX, TF, 1}
+end
+
+method_name(::Type{<:TangentialVelocityReconstructionPeixotoOld}) = "PeixotoOld"
+
+function TangentialVelocityReconstructionPeixotoOld(m::AbstractVoronoiMesh{false})
+    cR = CellVelocityReconstructionPerot(m)
+    tR_aux = TangentialVelocityReconstructionVelRecon(m, cR)
+    return TangentialVelocityReconstructionPeixotoOld(tR_aux.indices, tR_aux.weights)
+end
+
+function compute_weightsOnEdge_PeixotoOld_spherical!(
+            edgesOnEdge::AbstractVector{<:SmallVector{NE, TI}},
+            weightsOnEdge::AbstractVector{<:SmallVector{NE, TF}},
+            cell_pos,
+            v_pos,
+            cellsOnEdge,
+            verticesOnEdge,
+            edgesOnCell,
+            dvEdge,
+            nEdgesOnCell,
+            areaCell,
+            R::Number
+    ) where {NE, TI, TF}
+
+    @parallel for e in eachindex(cellsOnEdge)
+        @inbounds begin
+
+        w = SmallVector{NE, TF}()
+        inds = SmallVector{NE, TI}()
+
+        c1,c2 = cellsOnEdge[e]
+
+        c1e = cell_pos[c1]
+
+        v1,v2 = verticesOnEdge[e]
+        v1e = v_pos[v1]
+        v2e = v_pos[v2]
+        te_part = normalize(v2e - v1e)
+        n_at_e = normalize(arc_midpoint(R,v1e, v2e))
+        te = normalize(te_part - (te_part ⋅ n_at_e)*n_at_e)
+
+        inds_e_c1 = edgesOnCell[c1]
+        this_e_i = findfirst(isequal(e), inds_e_c1)::Int
+        inds_e_c1_shifted = circshift(inds_e_c1, -this_e_i)
+        nEdges_c1 = Int(nEdgesOnCell[c1])
+        a_c1 = areaCell[c1]
+
+        for i in 1:(nEdges_c1-1)
+            e_ = inds_e_c1_shifted[i]
+            v1, v2 = verticesOnEdge[e_]
+            v1p = v_pos[v1]
+            v2p = v_pos[v2]
+            emid = arc_midpoint(R,v1p, v2p)
+
+            r_vec = c1e - emid
+
+            c1_, c2_ = cellsOnEdge[e_]
+            c1_p = cell_pos[c1_]
+            c2_p = cell_pos[c2_]
+            ne = normalize(c2_p - c1_p)
+
+            r_vec = sign(ne ⋅ r_vec) * r_vec
+            w = push(w,  (dvEdge[e_] / (2 * a_c1)) * (r_vec ⋅ te))
+            inds = push(inds, e_)
+        end
+
+        c2e = cell_pos[c2]
+
+        inds_e_c2 = edgesOnCell[c2]
+        this_e_i = findfirst(isequal(e), inds_e_c2)::Int
+        inds_e_c2_shifted = circshift(inds_e_c2, -this_e_i)
+        nEdges_c2 = Int(nEdgesOnCell[c2])
+        a_c2 = areaCell[c2]
+
+        for i in 1:(nEdges_c2-1)
+            e_ = inds_e_c2_shifted[i]
+            v1, v2 = verticesOnEdge[e_]
+            v1p = v_pos[v1]
+            v2p = v_pos[v2]
+            emid = arc_midpoint(R, v1p, v2p)
+
+            r_vec = c2e - emid
+
+            c1_, c2_ = cellsOnEdge[e_]
+            c1_p = cell_pos[c1_]
+            c2_p = cell_pos[c2_]
+            ne = normalize(c2_p - c1_p)
+
+            r_vec = sign(ne ⋅ r_vec) * r_vec
+            w = push(w,  (dvEdge[e_] / (2 * a_c2)) * (r_vec ⋅ te))
+            inds = push(inds, e_)
+        end
+
+        edgesOnEdge[e] = inds
+        weightsOnEdge[e] = w
+        end #inbounds
+    end
+    return edgesOnEdge, weightsOnEdge
+end
+
+function compute_weightsOnEdge_PeixotoOld_spherical!(indices, w, cells::Cells{true},vertices::Vertices, edges::Edges)
+    return compute_weightsOnEdge_PeixotoOld_spherical!(indices, w, cells.position, vertices.position, edges.cells, edges.vertices, cells.edges, edges.length, cells.nEdges,cells.area,cells.sphere_radius)
+end
+
+compute_weightsOnEdge_PeixotoOld_spherical!(indices, w, m::AbstractVoronoiMesh{true}) = compute_weightsOnEdge_PeixotoOld_spherical!(indices, w, m.cells, m.vertices, m.edges)
+
+function compute_weightsOnEdge_PeixotoOld(mesh::AbstractVoronoiMesh{true})
+    nEdgesOnEdge = maximum(x->(x[1] + x[2] - 2), ((a,inds) -> @inbounds((a[inds[1]], a[inds[2]]))).((mesh.cells.nEdges,), mesh.edges.cells))
+    indices =SmVecArray{nEdgesOnEdge, integer_type(mesh)}(mesh.edges.n)
+    weights =SmallVectorArray(Vector{FixedVector{nEdgesOnEdge, float_type(mesh)}}(undef, mesh.edges.n), indices.length)
+    return compute_weightsOnEdge_PeixotoOld_spherical!(indices, weights, mesh)
+end
+
+function TangentialVelocityReconstructionPeixotoOld(mesh::AbstractVoronoiMesh{true})
+    return TangentialVelocityReconstructionPeixotoOld(compute_weightsOnEdge_PeixotoOld(mesh)...)
 end
 

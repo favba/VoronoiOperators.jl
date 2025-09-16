@@ -4,9 +4,18 @@ const IntOrVecRange = Union{Int, Int32, <:sd.VecRange}
 Base.@propagate_inbounds sd._pointer(arr::PtrArray, i, I) =
     pointer(arr, LinearIndices(arr)[i, I...])
 
-function mytmap!(func::F, output, var::Vararg) where {F <: Function}
+@inline function get_same_index(var::NTuple{N}, i::Integer) where {N}
+    f = @inline function(el)
+        @inbounds(var[el][i])
+    end
+    @inline ntuple(f , Val{N}())
+end
+
+function mytmap!(func::F, output, var::Vararg{N}) where {F <: Function, N}
     @batch for i in eachindex(output)
-        @inbounds output[i] = @inline func(map(x -> @inbounds(x[i]), var)...)
+        #@inbounds output[i] = @inline func(map(x -> @inbounds(x[i]), var)...)
+        t = @inline get_same_index(var, i)
+        @inbounds output[i] = @inline func(t...)
     end
     return output
 end

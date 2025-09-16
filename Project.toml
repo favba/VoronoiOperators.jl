@@ -15,6 +15,12 @@ TensorsLite = "1a1b94bd-d244-45e0-965a-8acfeb92b70f"
 TensorsLiteGeometry = "f9cc0174-84f8-4243-a119-6cf6c33db921"
 VoronoiMeshes = "978c199f-fe38-4011-9fe6-317bc1cdd350"
 
+[weakdeps]
+NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
+
+[extensions]
+NCDatasetsExt = ["NCDatasets"]
+
 [compat]
 Polyester = "0.7.18"
 SmallCollections = "0.4.1, 0.5"

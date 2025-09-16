@@ -559,3 +559,27 @@ edge_curl_field = 2 .* ( axis .⋅ normalize.(mesh_spherical.edges.position))
     isapprox(edge_curl_field .+ 1, curl_e(ee_field, +, e_field), rtol=1e-2)
 end
 
+@testset "Save operators to NetCDF" begin
+
+    oname = "custom_operators.nc"
+    save(oname, TangentialVelocityReconstructionPeixoto(mesh_distorted))
+
+    @test NCDataset(oname) do ds
+        ds.attrib["tangential_velocity_reconstruction_method"] == "Peixoto"
+    end
+
+    save(oname, CellVelocityReconstructionLSq2(mesh_distorted))
+    @test NCDataset(oname) do ds
+        ds.attrib["tangential_velocity_reconstruction_method"] == "Peixoto" &&
+        ds.attrib["cell_velocity_reconstruction_method"] == "LSq2"
+    end
+
+    save(oname, VertexVelocityReconstructionPerot(mesh_distorted))
+    @test NCDataset(oname) do ds
+        ds.attrib["tangential_velocity_reconstruction_method"] == "Peixoto" &&
+        ds.attrib["cell_velocity_reconstruction_method"] == "LSq2" &&
+        ds.attrib["vertex_velocity_reconstruction_method"] == "Perot"
+    end
+    Base.Filesystem.rm(oname)
+end
+

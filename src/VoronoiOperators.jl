@@ -84,4 +84,22 @@ include("tangential_velocity_reconstruction.jl")
 
 include("shallow_water_operators.jl")
 
+"""
+    save(filename::String, operator::VoronoiOperator; format=:netcdf5_64bit_data)
+
+The `NCDatasets` package must be loaded to use this function.
+Save the `operator` in a NetCDF file named `filename`.
+By default the CDF5 NetCDF file format is used. Other formats can be specified with the `format` keyword. See other available options with ?[`NCDataset`](@ref).
+
+"""
+function VoronoiMeshes.save(filename::AbstractString, obj::VoronoiOperator; kwds...)
+    _, ext = Base.Filesystem.splitext(filename)
+    if ext == ".nc"
+        VoronoiMeshes.save_to_netcdf(filename, obj; kwds...)
+    else
+        error("Unsupported file extension: $filename")
+    end
+    return nothing
+end
+
 end

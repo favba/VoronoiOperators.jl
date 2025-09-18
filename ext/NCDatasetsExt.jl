@@ -25,7 +25,7 @@ function save_to_netcdf!(ds::NCDataset, tanVelRecon::TangentialVelocityReconstru
     end
 
     defVar(
-        ds, "weightsOnEdge", reinterpret(reshape, TF, tanVelRecon.weights.data),
+        ds, "coeffs_edge_tanVel_reconstruct", reinterpret(reshape, TF, tanVelRecon.weights.data),
         ("maxEdges2", "nEdges"), attrib = [
             "units" => "-",
             "long_name" => "Weights used in reconstruction of tangential velocity for an edge.",
@@ -70,7 +70,7 @@ function save_to_netcdf!(ds::NCDataset, velRecon::CellVelocityReconstruction{N_M
     end
 
     defVar(
-        ds, "coeffs_reconstruct", weights,
+        ds, "coeffs_cell_vel_reconstruct", weights,
         ("R3", "maxEdges", "nCells"), attrib = [
             "units" => "-",
             "long_name" => "Coefficients to reconstruct velocity vectors at cell centers",
@@ -116,7 +116,7 @@ function save_to_netcdf!(ds::NCDataset, velRecon::VertexVelocityReconstruction{T
     end
 
     defVar(
-        ds, "vertex_coeffs_reconstruct", weights,
+        ds, "coeffs_vertex_vel_reconstruct", weights,
         ("R3", "vertexDegree", "nVertices"), attrib = [
             "units" => "-",
             "long_name" => "Coefficients to reconstruct velocity vectors at vertices",

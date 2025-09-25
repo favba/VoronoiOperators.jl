@@ -195,3 +195,17 @@ function CellVelocityReconstructionPerotOld(mesh::AbstractVoronoiMesh{true})
     CellVelocityReconstructionPerotOld(mesh.cells, mesh.edges, mesh.vertices)
 end
 
+function save_cell_reconstruction(mesh::AbstractVoronoiMesh, method::String, output::String)
+    if method == "Perot"
+        VoronoiMeshes.save(output, CellVelocityReconstructionPerot(mesh))
+    elseif method == "PerotOld"
+        VoronoiMeshes.save(output, CellVelocityReconstructionPerotOld(mesh))
+    elseif method == "LSq1"
+        VoronoiMeshes.save(output, CellVelocityReconstructionLSq1(mesh))
+    elseif method == "LSq2"
+        VoronoiMeshes.save(output, CellVelocityReconstructionLSq2(mesh))
+    else
+        throw(error(string(method, " is not a valid cell velocity reconstruction method")))
+    end
+end
+

@@ -357,3 +357,19 @@ function TangentialVelocityReconstructionPeixotoOld(mesh::AbstractVoronoiMesh{tr
     return TangentialVelocityReconstructionPeixotoOld(compute_weightsOnEdge_PeixotoOld(mesh)...)
 end
 
+function save_tangent_reconstruction(mesh::AbstractVoronoiMesh, method::String, output::String)
+    if method == "Thuburn"
+        VoronoiMeshes.save(output, TangentialVelocityReconstructionThuburn(mesh))
+    elseif method == "Peixoto"
+        VoronoiMeshes.save(output, TangentialVelocityReconstructionPeixoto(mesh))
+    elseif method == "PeixotoOld"
+        VoronoiMeshes.save(output, TangentialVelocityReconstructionPeixotoOld(mesh))
+    elseif method == "LSq1"
+        VoronoiMeshes.save(output, TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionLSq1(mesh)))
+    elseif method == "LSq2"
+        VoronoiMeshes.save(output, TangentialVelocityReconstructionVelRecon(mesh, CellVelocityReconstructionLSq2(mesh)))
+    else
+        throw(error(string(method, " is not a valid tangential velocity reconstruction method")))
+    end
+end
+

@@ -17,9 +17,11 @@ VoronoiMeshes = "978c199f-fe38-4011-9fe6-317bc1cdd350"
 
 [weakdeps]
 NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
+Comonicon = "863f3e99-da2a-4334-8734-de3dacbe5542"
 
 [extensions]
 NCDatasetsExt = ["NCDatasets"]
+ComoniconExt = ["NCDatasets", "VoronoiMeshes", "Comonicon"]
 
 [compat]
 Polyester = "0.7.18"

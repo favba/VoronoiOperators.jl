@@ -1,11 +1,11 @@
 module NCDatasetsExt
 
+using NCDatasets
 using TensorsLite, SmallCollections, VoronoiMeshes, VoronoiOperators
 import VoronoiOperators: VoronoiOperator, n_output, method_name
 import VoronoiMeshes: save_to_netcdf, save_to_netcdf!
-using NCDatasets
 
-function save_to_netcdf(filename::AbstractString, obj::VoronoiOperator; format = :netcdf5_64bit_data)
+function save_to_netcdf(filename::String, obj::VoronoiOperator; format = :netcdf5_64bit_data)
 
     mode = isfile(filename) ? "a" : "c"
 

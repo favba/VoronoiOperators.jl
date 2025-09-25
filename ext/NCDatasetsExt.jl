@@ -16,8 +16,8 @@ end
 
 function save_to_netcdf!(ds::NCDataset, tanVelRecon::TangentialVelocityReconstruction{N, TI, TF}) where {N, TI, TF}
 
-    if !haskey(ds.dim, "maxEdges2")
-        ds.dim["maxEdges2"] = N
+    if !haskey(ds.dim, "trueMaxEdges2")
+        ds.dim["trueMaxEdges2"] = N
     end
 
     if !haskey(ds.dim, "nEdges")
@@ -26,7 +26,7 @@ function save_to_netcdf!(ds::NCDataset, tanVelRecon::TangentialVelocityReconstru
 
     defVar(
         ds, "coeffs_edge_tanVel_reconstruct", reinterpret(reshape, TF, tanVelRecon.weights.data),
-        ("maxEdges2", "nEdges"), attrib = [
+        ("trueMaxEdges2", "nEdges"), attrib = [
             "units" => "-",
             "long_name" => "Weights used in reconstruction of tangential velocity for an edge.",
         ]

@@ -92,7 +92,7 @@ Save the `operator` in a NetCDF file named `filename`.
 By default the CDF5 NetCDF file format is used. Other formats can be specified with the `format` keyword. See other available options with ?[`NCDataset`](@ref).
 
 """
-function VoronoiMeshes.save(filename::AbstractString, obj::VoronoiOperator; kwds...)
+function VoronoiMeshes.save(filename::String, obj::VoronoiOperator; kwds...)
     _, ext = Base.Filesystem.splitext(filename)
     if ext == ".nc"
         VoronoiMeshes.save_to_netcdf(filename, obj; kwds...)

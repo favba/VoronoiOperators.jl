@@ -2,7 +2,7 @@ _capacity(::Type{<:FixedVector{N}}) where {N} = N
 _capacity(::Type{<:SmallVector{N}}) where {N} = N
 _capacity(a) = _capacity(typeof(a))
 
-@inline function compute_weights_lsq2(bpos::VecND{TF}, elements_pos, 𝐢::Vec, 𝐣::Vec) where {TF}
+@inline function compute_weights_lsq2(bpos::VecND{TF}, elements_pos, 𝐢::AbstractVec, 𝐣::AbstractVec) where {TF}
     @inbounds begin
     nElem = length(elements_pos)
 
@@ -26,7 +26,7 @@ _capacity(a) = _capacity(typeof(a))
     return wvec
 end
 
-@inline function compute_weights_lsq3(bpos::VecND{TF}, elements_pos, 𝐢::Vec, 𝐣::Vec) where {TF}
+@inline function compute_weights_lsq3(bpos::VecND{TF}, elements_pos, 𝐢::AbstractVec, 𝐣::AbstractVec) where {TF}
     @inbounds begin
     nElem = length(elements_pos)
 
@@ -117,13 +117,13 @@ function compute_weights_lsq_spherical!(w::AbstractVector{TV}, basePos, elemPos,
     return w
 end
 
-function build_weight_vector(pos::VecArray, elemOnBase::SmVecArray{NE, TI, 1}) where {NE, TI}
+function build_weight_vector(pos::TensorArray, elemOnBase::SmVecArray{NE, TI, 1}) where {NE, TI}
     TF = nonzero_eltype(eltype(pos))
     w = SmallVectorArray(Vector{FixedVector{NE,TF}}(undef, length(pos)), elemOnBase.length)
     return w
 end
 
-function build_weight_vector(pos::VecArray, ::AbstractVector{FixedVector{NE, TI}}) where {NE, TI}
+function build_weight_vector(pos::TensorArray, ::AbstractVector{FixedVector{NE, TI}}) where {NE, TI}
     TF = nonzero_eltype(eltype(pos))
     w = Vector{FixedVector{NE,TF}}(undef, length(pos))
     return w
@@ -139,7 +139,7 @@ function compute_weights_lsq(basePos, elemPos, elemOnBase, R::Number, lsq_func::
     return compute_weights_lsq_spherical!(w, basePos, elemPos, elemOnBase, R, lsq_func)
 end
 
-@inline function compute_weights_vec_lsq1(elements_normal, 𝐢::Vec, 𝐣::Vec)
+@inline function compute_weights_vec_lsq1(elements_normal, 𝐢::AbstractVec, 𝐣::AbstractVec)
     @inbounds begin
     nElem = length(elements_normal)
 
@@ -206,7 +206,7 @@ function compute_weights_vec_lsq1_spherical!(w::AbstractVector{TV}, basePos, ele
     return w
 end
 
-@inline function compute_weights_vec_lsq2(bpos::VecND{TF}, elements_pos, elements_normal, 𝐢::Vec, 𝐣::Vec) where {TF}
+@inline function compute_weights_vec_lsq2(bpos::VecND{TF}, elements_pos, elements_normal, 𝐢::AbstractVec, 𝐣::AbstractVec) where {TF}
     @inbounds begin
     nElem = length(elements_normal)
 

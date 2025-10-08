@@ -5,12 +5,12 @@ name_output(::CellVelocityReconstruction) = "cell"
 struct CellVelocityReconstructionPerot{N_MAX, TI, TF, TZ} <: CellVelocityReconstruction{N_MAX, TI, TF, TZ}
     n::Int
     indices::SmVecArray{N_MAX, TI, 1}
-    weights::SmVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
+    weights::SmVecArray{N_MAX, Tensor{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
 end
 
 method_name(::Type{<:CellVelocityReconstructionPerot}) = "Perot"
 
-function perot_velocity_reconstruction_from_normal(vertices::SmallVector{N_MAX}, signEdge, base_point::Vec) where {N_MAX}
+function perot_velocity_reconstruction_from_normal(vertices::SmallVector{N_MAX}, signEdge, base_point::AbstractVec) where {N_MAX}
 
     inv_a = inv(area(vertices))
 
@@ -86,7 +86,7 @@ end
 struct CellVelocityReconstructionLSq1{N_MAX, TI, TF, TZ} <: CellVelocityReconstruction{N_MAX, TI, TF, TZ}
     n::Int
     indices::SmVecArray{N_MAX, TI, 1}
-    weights::SmVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
+    weights::SmVecArray{N_MAX, Tensor{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
 end
 
 method_name(::Type{<:CellVelocityReconstructionLSq1}) = "LSq1"
@@ -112,7 +112,7 @@ end
 struct CellVelocityReconstructionLSq2{N_MAX, TI, TF, TZ} <: CellVelocityReconstruction{N_MAX, TI, TF, TZ}
     n::Int
     indices::SmVecArray{N_MAX, TI, 1}
-    weights::SmVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
+    weights::SmVecArray{N_MAX, Tensor{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
 end
 
 method_name(::Type{<:CellVelocityReconstructionLSq2}) = "LSq2"
@@ -139,7 +139,7 @@ end
 struct CellVelocityReconstructionPerotOld{N_MAX, TI, TF, TZ} <: CellVelocityReconstruction{N_MAX, TI, TF, TZ}
     n::Int
     indices::SmVecArray{N_MAX, TI, 1}
-    weights::SmVecArray{N_MAX, Vec{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
+    weights::SmVecArray{N_MAX, Tensor{Union{TF, TZ}, 1, TF, TF, TZ}, 1}
 end
 
 method_name(::Type{<:CellVelocityReconstructionPerotOld}) = "PerotOld"

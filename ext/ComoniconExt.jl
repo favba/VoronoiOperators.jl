@@ -57,7 +57,7 @@ Comonicon.@main function create_voronoi_operator(grid::String, output::String;
                                                  vertex_reconstruction::String="",
                                                  start_time::String="0000-01-01_00:00:00")
     @info string("Reading ", grid," file")
-    mesh = VoronoiMesh(grid)
+    mesh = VoronoiMesh(grid, read_computed=false)
     @info "Creating edge tangent velocity reconstruction weights"
     VoronoiOperators.save_tangent_reconstruction(mesh, tangent_reconstruction, output)
     if cell_reconstruction != ""

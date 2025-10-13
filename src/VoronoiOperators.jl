@@ -102,4 +102,7 @@ function VoronoiMeshes.save(filename::String, obj::VoronoiOperator; kwds...)
     return nothing
 end
 
+# Implemented in ext/ComoniconExt.jl
+function create_voronoi_operator end
+
 end

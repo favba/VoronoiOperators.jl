@@ -133,3 +133,15 @@ function VertexVelocityReconstructionLSq2(mesh::AbstractVoronoiMesh)
     VertexVelocityReconstructionLSq2(mesh.vertices, mesh.edges)
 end
 
+function save_vertex_reconstruction(mesh::AbstractVoronoiMesh, method::String, output::String)
+    if method == "Perot"
+        VoronoiMeshes.save(output, VertexVelocityReconstructionPerot(mesh))
+    elseif method == "LSq1"
+        VoronoiMeshes.save(output, VertexVelocityReconstructionLSq1(mesh))
+    elseif method == "LSq2"
+        VoronoiMeshes.save(output, VertexVelocityReconstructionLSq2(mesh))
+    else
+        throw(error(string(method, " is not a valid vertex velocity reconstruction method")))
+    end
+end
+

@@ -3,10 +3,8 @@ module ComoniconExt
 using NCDatasets
 
 using VoronoiMeshes, VoronoiOperators
-const vm = Base.get_extension(VoronoiMeshes, :NCDatasetsExt)
 
 using VoronoiOperators
-const vo = Base.get_extension(VoronoiOperators, :NCDatasetsExt)
 
 using Comonicon
 
@@ -39,7 +37,6 @@ end
 precompile(Tuple{typeof(save_start_time), String, String})
 
 """
-
 Create and save new Voronoi horizontal operators to a NetCDF file.
 
 # Arguments
@@ -51,26 +48,38 @@ Create and save new Voronoi horizontal operators to a NetCDF file.
 
 - `-t, --tangent_reconstruction`: Edge tangential velocity reconstruction method. Available options: "Peixoto", "PeixotoOld", "LSq1", "LSq2", and "Thuburn". Default is "Thuburn".
 - `-c, --cell_reconstruction`: Cell velocity reconstruction method. Available options: "Perot", "PerotOld", "LSq1", and "LSq2". No cell velocity reconstruction method is written to file by default.
+- `-v, --vertex_reconstruction`: Vertex velocity reconstruction method. Available options: "Perot", "LSq1", and "LSq2". No vertex velocity reconstruction method is written to file by default.
 - `-s, --start_time`: Simulation start time. Should be the same as in "config \U0332 start \U0332 time" from namelist.init \U0332 atmosphere. Default value of "0000-01-01 \U0332 00:00:00".
 """
-Comonicon.@main function create_voronoi_operator(grid::String, output::String; tangent_reconstruction::String="Thuburn", cell_reconstruction::String="", start_time::String="0000-01-01_00:00:00")
+Comonicon.@main function create_voronoi_operator(grid::String, output::String;
+                                                 tangent_reconstruction::String="Thuburn",
+                                                 cell_reconstruction::String="",
+                                                 vertex_reconstruction::String="",
+                                                 start_time::String="0000-01-01_00:00:00")
     @info string("Reading ", grid," file")
-    mesh = vm.VoronoiMesh(grid)
+    mesh = VoronoiMesh(grid)
     @info "Creating edge tangent velocity reconstruction weights"
     VoronoiOperators.save_tangent_reconstruction(mesh, tangent_reconstruction, output)
     if cell_reconstruction != ""
         @info "Creating cell velocity reconstruction weights"
         VoronoiOperators.save_cell_reconstruction(mesh, cell_reconstruction, output)
     end
+    if vertex_reconstruction != ""
+        @info "Creating vertex velocity reconstruction weights"
+        VoronoiOperators.save_vertex_reconstruction(mesh, vertex_reconstruction, output)
+    end
     save_start_time(output, start_time)
     @info string("Operators saved to ", output)
     return 0
 end
 
-precompile(Tuple{typeof(Core.kwcall), NamedTuple{(:tangent_reconstruction, :cell_reconstruction), Tuple{String, String}}, typeof(create_voronoi_operator), String, String})
-precompile(create_voronoi_operator, (String, String, @NamedTuple{tangent_reconstruction::String, cell_reconstruction::String}))
+precompile(Tuple{typeof(Core.kwcall), NamedTuple{(:tangent_reconstruction, :cell_reconstruction, :vertex_reconstruction, :start_time), Tuple{String, String, String, String}}, typeof(create_voronoi_operator), String, String})
+precompile(create_voronoi_operator, (String, String, @NamedTuple{tangent_reconstruction::String, cell_reconstruction::String, vertex_reconstruction::String, start_time::String}))
 
 precompile(Tuple{typeof(command_main), Vector{String}})
 precompile(Tuple{typeof(command_main)})
 
+VoronoiOperators.create_voronoi_operator(args::Vector{String}) = command_main(args)
+
+precompile(Tuple{typeof(VoronoiOperators.create_voronoi_operator), Vector{String}})
 end

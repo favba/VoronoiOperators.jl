@@ -10,7 +10,7 @@ end
 
 method_name(::Type{<:CellVelocityReconstructionPerot}) = "Perot"
 
-function perot_velocity_reconstruction_from_normal(vertices::SmallVector{N_MAX}, signEdge, base_point::AbstractVec) where {N_MAX}
+function perot_velocity_reconstruction_from_normal(vertices::SmallVector{N_MAX}, signEdge, base_point::Vec) where {N_MAX}
 
     inv_a = inv(area(vertices))
 

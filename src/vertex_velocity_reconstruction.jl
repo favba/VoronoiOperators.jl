@@ -10,7 +10,7 @@ end
 
 method_name(::Type{<:VertexVelocityReconstructionPerot}) = "Perot"
 
-function perot_velocity_reconstruction_from_tangent(vertices::SmallVector{N_MAX}, signEdge, base_point::AbstractVec, base_normal::AbstractVec) where {N_MAX}
+function perot_velocity_reconstruction_from_tangent(vertices::SmallVector{N_MAX}, signEdge, base_point::Vec, base_normal::Vec) where {N_MAX}
 
     inv_a = inv(area(vertices))
 

@@ -15,6 +15,11 @@ TensorsLite = "1a1b94bd-d244-45e0-965a-8acfeb92b70f"
 TensorsLiteGeometry = "f9cc0174-84f8-4243-a119-6cf6c33db921"
 VoronoiMeshes = "978c199f-fe38-4011-9fe6-317bc1cdd350"
 
+[sources]
+TensorsLite = {url = "https://github.com/favba/TensorsLite.jl"}
+TensorsLiteGeometry = {url = "https://github.com/favba/TensorsLiteGeometry.jl"}
+VoronoiMeshes = {url = "https://github.com/favba/VoronoiMeshes.jl"}
+
 [weakdeps]
 NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
 Comonicon = "863f3e99-da2a-4334-8734-de3dacbe5542"
@@ -24,10 +29,16 @@ NCDatasetsExt = ["NCDatasets"]
 ComoniconExt = ["NCDatasets", "VoronoiMeshes", "Comonicon"]
 
 [compat]
-Polyester = "0.7.18"
+LinearAlgebra = "1"
+OrderedCollections = "1"
+Polyester = "0.7"
+SIMD = "3"
 SmallCollections = "0.4.1, 0.5"
-VoronoiMeshes = "1.0.0"
-julia = "1.9"
+StrideArraysCore = "0.5"
+TaskLocalValues = "0.1"
+julia = "1.10"
+NCDatasets = "0.14"
+Comonicon = "1"
 
 [extras]
 NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"

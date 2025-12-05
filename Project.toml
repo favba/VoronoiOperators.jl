@@ -1,12 +1,13 @@
 name = "VoronoiOperators"
 uuid = "28deb5e7-6037-4488-9d39-5419413b6983"
-authors = ["Felipe A. V. de Bragança Alves <favbalves@gmail.com> and contributors"]
 version = "1.0.0-DEV"
+authors = ["Felipe A. V. de Bragança Alves <favbalves@gmail.com> and contributors"]
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 Polyester = "f517fe37-dbe3-4b94-8317-1923a5111588"
+PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 SIMD = "fdea26ae-647d-5447-a871-4b548cad5224"
 SmallCollections = "2b935e18-93d6-40ac-ae34-fe54c09f00e1"
 StrideArraysCore = "7792a7ef-975c-4747-a70f-980b88e8d1da"
@@ -15,30 +16,31 @@ TensorsLite = "1a1b94bd-d244-45e0-965a-8acfeb92b70f"
 TensorsLiteGeometry = "f9cc0174-84f8-4243-a119-6cf6c33db921"
 VoronoiMeshes = "978c199f-fe38-4011-9fe6-317bc1cdd350"
 
-[sources]
-TensorsLite = {url = "https://github.com/favba/TensorsLite.jl"}
-TensorsLiteGeometry = {url = "https://github.com/favba/TensorsLiteGeometry.jl"}
-VoronoiMeshes = {url = "https://github.com/favba/VoronoiMeshes.jl"}
-
 [weakdeps]
-NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
 Comonicon = "863f3e99-da2a-4334-8734-de3dacbe5542"
+NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
+
+[sources]
+TensorsLite = {rev = "main", url = "https://github.com/favba/TensorsLite.jl"}
+TensorsLiteGeometry = {rev = "main", url = "https://github.com/favba/TensorsLiteGeometry.jl"}
+VoronoiMeshes = {rev = "main", url = "https://github.com/favba/VoronoiMeshes.jl"}
 
 [extensions]
-NCDatasetsExt = ["NCDatasets"]
 ComoniconExt = ["NCDatasets", "VoronoiMeshes", "Comonicon"]
+NCDatasetsExt = ["NCDatasets"]
 
 [compat]
+Comonicon = "1"
 LinearAlgebra = "1"
+NCDatasets = "0.14"
 OrderedCollections = "1"
 Polyester = "0.7"
+PrecompileTools = "1"
 SIMD = "3"
 SmallCollections = "0.4.1, 0.5"
 StrideArraysCore = "0.5"
 TaskLocalValues = "0.1"
 julia = "1.10"
-NCDatasets = "0.14"
-Comonicon = "1"
 
 [extras]
 NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"

@@ -40,14 +40,14 @@ function write_custom_areas(output::String, mesh::AbstractVoronoiMesh, areas_typ
 
     NCDataset(output,"a") do ds
         if areas_type == "geometric"
-            write_field_to_netcdf!(ds, mesh.cells.area, "customAreaCell", "nCells", ["units" => "m^2"])
-            write_field_to_netcdf!(ds, mesh.vertices.area, "customAreaVertex", "nVertices", ["units" => "m^2"])
-            write_field_to_netcdf!(ds, mesh.vertices.kiteAreas, "customKiteAreas", ("vertexDegree", "nVertices"), ["units" => "m^2"])
+            write_field_to_netcdf!(ds, mesh.cells.area, "custom_areaCell", "nCells", ["units" => "m^2"])
+            write_field_to_netcdf!(ds, mesh.vertices.area, "custom_areaTriangle", "nVertices", ["units" => "m^2"])
+            write_field_to_netcdf!(ds, mesh.vertices.kiteAreas, "custom_kiteAreasOnVertex", ("vertexDegree", "nVertices"), ["units" => "m^2"])
             ds.attrib["areas_type"] = "geometric"
         elseif areas_type == "mimetic"
-            write_field_to_netcdf!(ds, mesh.cells.areaMimetic, "customAreaCell", "nCells", ["units" => "m^2"])
-            write_field_to_netcdf!(ds, mesh.vertices.areaMimetic, "customAreaVertex", "nVertices", ["units" => "m^2"])
-            write_field_to_netcdf!(ds, mesh.vertices.kiteAreasMimetic, "customKiteAreas", ("vertexDegree", "nVertices"), ["units" => "m^2"])
+            write_field_to_netcdf!(ds, mesh.cells.areaMimetic, "custom_areaCell", "nCells", ["units" => "m^2"])
+            write_field_to_netcdf!(ds, mesh.vertices.areaMimetic, "custom_areaTriangle", "nVertices", ["units" => "m^2"])
+            write_field_to_netcdf!(ds, mesh.vertices.kiteAreasMimetic, "custom_kiteAreasOnVertex", ("vertexDegree", "nVertices"), ["units" => "m^2"])
             ds.attrib["areas_type"] = "mimetic"
         end
     end

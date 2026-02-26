@@ -1,6 +1,6 @@
 name = "VoronoiOperators"
 uuid = "28deb5e7-6037-4488-9d39-5419413b6983"
-version = "1.0.0-DEV"
+version = "0.1.0"
 authors = ["Felipe A. V. de Bragança Alves <favbalves@gmail.com> and contributors"]
 
 [deps]
@@ -40,6 +40,9 @@ SIMD = "3"
 SmallCollections = "0.4.1, 0.5, 0.6"
 StrideArraysCore = "0.5"
 TaskLocalValues = "0.1"
+TensorsLite = "0.1"
+TensorsLiteGeometry = "0.1"
+VoronoiMeshes = "0.1"
 julia = "1.10"
 
 [extras]

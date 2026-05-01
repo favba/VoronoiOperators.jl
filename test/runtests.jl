@@ -2,7 +2,7 @@ using TensorsLite, TensorsLiteGeometry, SmallCollections, LinearAlgebra
 using NCDatasets
 using VoronoiMeshes
 using VoronoiOperators
-using VoronoiOperators: CellVelocityReconstructionPerotOld, TangentialVelocityReconstructionPeixotoOld
+using VoronoiOperators: CellVelocityReconstructionPerotOld, TangentialVelocityReconstructionPeixotoOld, CellKineticEnergyLSq2, CellKineticEnergyLSq2Weighted
 using Test
 
 const mesh_iso = VoronoiMesh("mesh.nc")
@@ -231,7 +231,7 @@ const vertex_kinetic_energy = (vertex_Vec_field .⋅ vertex_Vec_field) ./ 2
             end
         end
 
-        for kR in (CellKineticEnergyRingler(mesh), CellKineticEnergyMPAS(mesh))
+        for kR in (CellKineticEnergyRingler(mesh), CellKineticEnergyMPAS(mesh), CellKineticEnergyPerot(mesh), CellKineticEnergyPerotWeighted(mesh), CellKineticEnergyLSq2(mesh), CellKineticEnergyLSq2Weighted(mesh))
             for ueND in (ue1D, ue2D, ue3D)
                 if (mesh === mesh_iso)
                     @test all(isapprox(12.5), kR(ueND))

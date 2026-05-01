@@ -1,6 +1,6 @@
 const IntOrVecRange = Union{Int, Int32, <:sd.VecRange}
 
-#This is piracy
+#This is piracy. Needed while https://github.com/eschnett/SIMD.jl/issues/121 is not solved.
 Base.@propagate_inbounds sd._pointer(arr::PtrArray, i, I) =
     pointer(arr, LinearIndices(arr)[i, I...])
 

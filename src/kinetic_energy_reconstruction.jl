@@ -211,11 +211,29 @@ const CellKineticEnergyPerotWeighted{N_MAX, TI, TF, TZ} = CellKineticEnergyVerte
 
 function CellKineticEnergyPerotWeighted(mesh::AbstractVoronoiMesh, alpha = 1 - 0.375)
     T = float_type(typeof(mesh.cells))
-    return CellKineticEnergyVertexWeighted(VertexKineticEnergyPerot(mesh), CellKineticEnergyPerot(mesh), VertexToCellArea(mesh), alpha, Ref{Vector{T}}(), Ref{Matrix{T}}(), Ref{Array{T, 3}}())
+    return CellKineticEnergyVertexWeighted(VertexKineticEnergyPerot(mesh), CellKineticEnergyPerot(mesh), VertexToCellArea(mesh), alpha)
 end
 
 const CellKineticEnergyPerotOld{N_MAX, TI, TF, TZ} = CellKineticEnergyVelRecon{N_MAX, TI, TF, CellVelocityReconstructionPerotOld{N_MAX, TI, TF, TZ}}
 
 CellKineticEnergyPerotOld(mesh::AbstractVoronoiMesh) = CellKineticEnergyVelRecon(CellVelocityReconstructionPerotOld(mesh))
 
+
+const CellKineticEnergyLSq2{N_MAX, TI, TF, TZ} = CellKineticEnergyVelRecon{N_MAX, TI, TF, CellVelocityReconstructionLSq2{N_MAX, TI, TF, TZ}}
+
+CellKineticEnergyLSq2(mesh::AbstractVoronoiMesh) = CellKineticEnergyVelRecon(CellVelocityReconstructionLSq2(mesh))
+
+const VertexKineticEnergyLSq2{TI, TF, TZ} = VertexKineticEnergyVelRecon{TI, TF, VertexVelocityReconstructionLSq2{TI, TF, TZ}}
+
+VertexKineticEnergyLSq2(mesh::AbstractVoronoiMesh) = VertexKineticEnergyVelRecon(VertexVelocityReconstructionLSq2(mesh))
+
+const CellKineticEnergyLSq2Weighted{N_MAX, TI, TF, TZ} = CellKineticEnergyVertexWeighted{N_MAX, TI, TF,
+                                                                             VertexKineticEnergyLSq2{TI, TF, TZ},
+                                                                             CellKineticEnergyLSq2{N_MAX, TI, TF, TZ},
+                                                                             VertexToCellArea{N_MAX, TI, TF}}
+
+function CellKineticEnergyLSq2Weighted(mesh::AbstractVoronoiMesh, alpha = 1 - 0.375)
+    T = float_type(typeof(mesh.cells))
+    return CellKineticEnergyVertexWeighted(VertexKineticEnergyLSq2(mesh), CellKineticEnergyLSq2(mesh), VertexToCellArea(mesh), alpha)
+end
 

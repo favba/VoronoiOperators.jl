@@ -50,14 +50,11 @@ end
     #Perform regularization if condition number is too big (or Inf)
     #Regularize only quadratic terms, to preserve 1st order and 2nd order terms
     cn = cond(MpM)
-    ii = 0
-    while cn > 5e6
-        ii += 1
-        #@show c, ii, cn
+    if cn > 5e6
+        λ = opnorm(MpM) / 5e6
         for i in 4:6
-            MpM[i, i] += 1e-6
+            MpM[i, i] += λ
         end
-        cn = cond(MpM)
     end
 
     P = LinearAlgebra.inv!(cholesky!(MpM))*M'
@@ -229,13 +226,11 @@ end
 
     MpM = Hermitian(M'*M)
     cn = cond(MpM)
-    ii = 0
-    while cn > 5e6
-        ii += 1
+    if (cn > 5e6)
+        λ = opnorm(MpM) / 5e6
         for i in 3:6
-            MpM[i, i] += 1e-6
+            MpM[i, i] += λ
         end
-        cn = cond(MpM)
     end
 
     P = LinearAlgebra.inv!(cholesky!(MpM))*M'

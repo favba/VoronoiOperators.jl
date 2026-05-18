@@ -90,8 +90,8 @@ n_input(o::CellKineticEnergyVertexWeighted) = n_input(o.cellReconstruction)
 n_output(o::CellKineticEnergyVertexWeighted) = n_output(o.cellReconstruction)
 out_eltype(o::CellKineticEnergyVertexWeighted, in_field, op::F = Base.identity) where {F} = out_eltype(o.cellReconstruction, in_field, op)
 
-function CellKineticEnergyVertexWeighted(vertexReconstruction::VertexKineticEnergyReconstruction{TI,TF}, cellReconstruction, vertexToCell, alpha = 1 - 0.375) where {TI, TF}
-    return CellKineticEnergyVertexWeighted(vertexReconstruction, cellReconstruction, vertexToCell, alpha)
+function CellKineticEnergyVertexWeighted(vertexReconstruction::VertexKineticEnergyReconstruction, cellReconstruction::CellKineticEnergyReconstruction, vertexToCell::VertexToCellTransformation)
+    return CellKineticEnergyVertexWeighted(vertexReconstruction, cellReconstruction, vertexToCell, 1 - 0.375)
 end
 
 struct Combination{T} <: Function

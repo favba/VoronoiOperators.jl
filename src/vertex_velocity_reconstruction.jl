@@ -84,7 +84,7 @@ VertexVelocityReconstructionPerot(mesh::AbstractVoronoiMesh) =
 struct VertexVelocityReconstructionLSq1{TI, TF, TZ} <: VertexVelocityReconstruction{TI, TF, TZ}
     n::Int
     indices::Vector{FixedVector{3, TI}}
-    weights::Vector{FixedVector{3, Tensor{Union{TF, TZ}, 1, TF, TF, TZ}}}
+    weights::Vector{FixedVector{3, Tensor{1, Union{TF, TZ}, TF, TF, TZ}}}
 end
 
 method_name(::Type{<:VertexVelocityReconstructionLSq1}) = "LSq1"
@@ -110,7 +110,7 @@ end
 struct VertexVelocityReconstructionLSq2{TI, TF, TZ} <: VertexVelocityReconstruction{TI, TF, TZ}
     n::Int
     indices::Vector{FixedVector{3, TI}}
-    weights::Vector{FixedVector{3, Tensor{Union{TF, TZ}, 1, TF, TF, TZ}}}
+    weights::Vector{FixedVector{3, Tensor{1, Union{TF, TZ}, TF, TF, TZ}}}
 end
 
 method_name(::Type{<:VertexVelocityReconstructionLSq2}) = "LSq2"

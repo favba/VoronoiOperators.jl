@@ -392,3 +392,35 @@ function compute_rotational_at_edge_weights(areaVertex, dc, edgesOnVertex, cells
 end
 
 CurlAtEdge(mesh::AbstractVoronoiMesh) = CurlAtEdge(compute_rotational_at_edge_weights(mesh.vertices.area, mesh.edges.lengthDual, mesh.vertices.edges, mesh.edges.cells, mesh.edges.vertices)...)
+
+struct CurlAtEdgeFromVertex{TI, TF, VTE<:VertexToEdgeTransformation} <: DifferentialOperator
+    vertexToEdge::VTE
+    curlAtVertex::CurlAtVertex{TI,TF}
+end
+
+n_output(a::CurlAtEdgeFromVertex) = n_output(a.vertexToEdge)
+n_input(a::CurlAtEdgeFromVertex) = n_output(a)
+
+name_input(::CurlAtEdgeFromVertex) = "edge"
+name_output(::CurlAtEdgeFromVertex) = "edge"
+
+function (curl::CurlAtEdgeFromVertex)(out_field::AbstractArray, in_field::AbstractArray, op::F = Base.identity) where {F<:Function}
+    is_proper_size(in_field, n_input(curl)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(curl)) field"))
+    is_proper_size(out_field, n_output(curl)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(curl)) field"))
+
+    curl_v = curl.curlAtVertex(in_field, op)
+    return curl.vertexToEdge(out_field, curl_v)
+end
+
+function (curl::CurlAtEdgeFromVertex)(out_field::AbstractArray, op_out::F2, in_field::AbstractArray, op::F = Base.identity) where {F<:Function, F2<:Function}
+    is_proper_size(in_field, n_input(curl)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(curl)) field"))
+    is_proper_size(out_field, n_output(curl)) || throw(DimensionMismatch("Output array doesn't seem to be a $(name_output(curl)) field"))
+
+    curl_v = curl.curlAtVertex(in_field, op)
+    return curl.vertexToEdge(out_field, op_out, curl_v)
+end
+function (curl::CurlAtEdgeFromVertex)(in_field::AbstractArray, op::F = Base.identity) where {F<:Function}
+    is_proper_size(in_field, n_input(curl)) || throw(DimensionMismatch("Input array doesn't seem to be a $(name_input(curl)) field"))
+    out_field = similar(in_field) 
+    return curl(out_field, in_field, op)
+end

@@ -557,6 +557,13 @@ edge_curl_field = 2 .* ( axis .⋅ normalize.(mesh_spherical.edges.position))
 
     ee_field = ones(nedges_s)
     isapprox(edge_curl_field .+ 1, curl_e(ee_field, +, e_field), rtol=1e-2)
+
+    curl_ev = CurlAtEdgeFromVertex(VertexToEdgeInterpolation(mesh), CurlAtVertex(mesh))
+
+    isapprox(edge_curl_field, curl_ev(e_field), rtol=1e-2)
+    ee_field = ones(nedges_s)
+    isapprox(edge_curl_field .+ 1, curl_ev(ee_field, +, e_field), rtol=1e-2)
+
 end
 
 @testset "Save operators to NetCDF" begin

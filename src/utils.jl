@@ -27,9 +27,9 @@ end
 # @inline insert_index(inds_input::NTuple{1}, inds_output::NTuple{N, T}) where {N, T <: Integer} = ntuple(i -> (Int(inds_input[1]), Int(inds_output[i])), Val{N}())
 # @inline insert_index(inds_input::NTuple{2}, inds_output::NTuple{N, T}) where {N, T <: Integer} = ntuple(i -> (Int(inds_input[1]), Int(inds_output[i]), Int(inds_input[2])), Val{N}())
 
-@inline construct_new_node_index(i::Integer, n::Integer) = (oftype(i, n),)
-@inline construct_new_node_index(k::Integer, i::Integer, n::Integer) = (k, oftype(i, n))
-@inline construct_new_node_index(k::Integer, i::Integer, t::Integer, n::Integer) = (k, oftype(i, n), t)
+@inline construct_new_node_index(n::Integer, i::Integer) = (oftype(i, n),)
+@inline construct_new_node_index(n::Integer, k, i::Integer) = (k, oftype(i, n))
+@inline construct_new_node_index(n::Integer, k, i::Integer, t::Integer) = (k, oftype(i, n), t)
 
 @inline is_proper_size(field::AbstractVector, n::Integer) = length(field) == n
 @inline is_proper_size(field::AbstractMatrix, n::Integer) = size(field, 2) == n

@@ -41,7 +41,7 @@ my_similar(in_field, ::Type{T}, s) where {T <: Vec2Dxy} = VecArray(x = similar(i
 my_similar(in_field, ::Type{T}, s) where {T <: Vec3D} = VecArray(x = similar(in_field, nonzero_eltype(T), s), y = similar(in_field, nonzero_eltype(T), s), z = similar(in_field, nonzero_eltype(T), s))
 
 function create_output_array(Vop::VoronoiOperator, in_field, op::F = Base.identity) where {F}
-    s = construct_new_node_index(size(in_field)..., n_output(Vop))
+    s = construct_new_node_index(n_output(Vop), size(in_field)...)
     return my_similar(in_field, out_eltype(Vop, in_field, op), s)
 end
 

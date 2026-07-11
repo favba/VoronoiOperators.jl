@@ -166,7 +166,7 @@ function compute_weights_perotOld_velocity_reconstruction_spherical!(w::Abstract
 
         eoc = edgesOnCell[c]
 
-        w = SmallVector{N_MAX, typeof(cp)}()
+        wl = SmallVector{N_MAX, typeof(cp)}()
         signEdge_c = signEdges[c]
         l = length(eoc)
         @inbounds for ei in Base.OneTo(l)
@@ -175,10 +175,10 @@ function compute_weights_perotOld_velocity_reconstruction_spherical!(w::Abstract
             le = edge_length[e]
             ve_c = mid_point - cp
             ve_c_proj = ve_c - (ve_c ⋅ cp_n)*cp_n
-            w = push(w, (signEdge_c[ei] * inv_a * le) * ve_c_proj)
+            wl = push(wl, (signEdge_c[ei] * inv_a * le) * ve_c_proj)
         end
 
-        wdata[c] = fixedvector(w)
+        wdata[c] = fixedvector(wl)
         end #inbounds
     end
     return w

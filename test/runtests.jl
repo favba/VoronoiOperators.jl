@@ -566,6 +566,62 @@ edge_curl_field = 2 .* ( axis .⋅ normalize.(mesh_spherical.edges.position))
 
 end
 
+edge_mpas_coriolis_term = edge_tVec_field .* edge_curl_field
+edge_mpas_coriolis_term2D = zeros(10, length(edge_mpas_coriolis_term))
+for k in axes(edge_mpas_coriolis_term2D, 1)
+    edge_mpas_coriolis_term2D[k, :] .= edge_mpas_coriolis_term
+end
+
+@testset "MPAS/TRiSK Coriolis Term" begin
+    mesh = mesh_spherical
+
+    vte = VertexToEdgeMean(mesh)
+    curl_v = CurlAtVertex(mesh)
+    curl_ev = CurlAtEdgeFromVertex(vte, curl_v)
+    tR = TangentialVelocityReconstructionThuburn(mesh)
+    e_curl = curl_ev(edge_Vec_field)
+    cori_mpas = similar(edge_Vec_field)
+
+    VoronoiOperators.mpas_coriolis_term!(cori_mpas, tR, edge_Vec_field, e_curl)
+
+    @test isapprox(edge_mpas_coriolis_term, cori_mpas, rtol=1e-2)
+
+    edge_Vec_field2D = zeros(10, length(edge_Vec_field))
+    e_curl2D = zeros(10, length(e_curl))
+    for k in axes(edge_Vec_field2D, 1)
+        edge_Vec_field2D[k, :] .= edge_Vec_field
+        e_curl2D[k, :] .= e_curl
+    end
+
+    cori_mpas2D = similar(e_curl2D)
+    VoronoiOperators.mpas_coriolis_term!(cori_mpas2D, tR, edge_Vec_field2D, e_curl2D)
+    @test isapprox(edge_mpas_coriolis_term2D, cori_mpas2D, rtol=1e-2)
+
+    hv = 2 .* ones(mesh.vertices.n)
+    he = 2 .* ones(mesh.edges.n)
+
+    pv_vertex = curl_v(edge_Vec_field) ./ hv 
+    pv_edge = vte(pv_vertex)
+    cori_trisk = similar(edge_Vec_field)
+
+    VoronoiOperators.trisk_coriolis_term!(cori_trisk, tR, he, edge_Vec_field, pv_edge)
+
+
+    @test isapprox(edge_mpas_coriolis_term, cori_trisk, rtol=1e-2)
+
+    pv_edge2D = zeros(10, length(pv_edge))
+    he2D = zeros(10, length(he))
+    for k in axes(edge_Vec_field2D, 1)
+        pv_edge2D[k, :] .= pv_edge
+        he2D[k, :] .= he
+    end
+    cori_trisk2D = similar(he2D)
+
+    VoronoiOperators.trisk_coriolis_term!(cori_trisk2D, tR, he2D, edge_Vec_field2D, pv_edge2D)
+
+    @test isapprox(edge_mpas_coriolis_term2D, cori_trisk2D, rtol=1e-2)
+end
+
 @testset "Save operators to NetCDF" begin
 
     oname = "custom_operators.nc"

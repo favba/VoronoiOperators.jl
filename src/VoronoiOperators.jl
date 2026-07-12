@@ -22,6 +22,7 @@ export TangentialVelocityReconstruction, TangentialVelocityReconstructionThuburn
 export method_name
 
 export DivCellScalarU
+export local_mpas_coriolis_term, local_trisk_coriolis_term, mpas_coriolis_term!, trisk_coriolis_term!
 
 method_name(a) = method_name(typeof(a))
 

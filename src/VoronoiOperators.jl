@@ -84,7 +84,7 @@ include("differential_operators.jl")
 include("filtering_operators.jl")
 include("tangential_velocity_reconstruction.jl")
 
-include("shallow_water_operators.jl")
+include("nonlinear_operators.jl")
 
 """
     save(filename::String, operator::VoronoiOperator; format=:netcdf5_64bit_data)

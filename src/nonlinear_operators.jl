@@ -26,7 +26,7 @@ function (divrhou::DivCellScalarU)(ρ::AbstractArray, u::AbstractArray)
 end
 
 
-#This computes pv*h*u⟂, where pv = (∇⨯uₕ + f) / h, following the original TRiSK scheme
+#This computes -pv*h*u⟂, where pv = (∇⨯uₕ + f) / h, following the original TRiSK scheme
 @inline function local_trisk_coriolis_term(Inds::TT, we::AbstractVector{TF}, eoe::AbstractVector{<:Integer}, h_edge, u, pv_edge) where {TT<:Tuple, TF}
 
     @inbounds begin
@@ -40,10 +40,10 @@ end
         end
     end
 
-    return r
+    return -r
 end
 
-#This computes pv*h*u⟂, where pv = (∇⨯uₕ + f) / h, following the original TRiSK scheme
+#This computes -pv*h*u⟂, where pv = (∇⨯uₕ + f) / h, following the original TRiSK scheme
 function trisk_coriolis_term!(output::AbstractVector{TF}, weightsOnEdge::AbstractVector, edgesOnEdge, h_edge, u, pv_edge) where {TF}
     @batch for e in eachindex(output)
         @inbounds output[e] = local_trisk_coriolis_term((e,), weightsOnEdge[e], edgesOnEdge[e], h_edge, u, pv_edge)
@@ -52,7 +52,7 @@ function trisk_coriolis_term!(output::AbstractVector{TF}, weightsOnEdge::Abstrac
 end
 
 
-#This computes pv*h*u⟂, where pv = (∇⨯uₕ + f) / h, following the original TRiSK scheme
+#This computes -pv*h*u⟂, where pv = (∇⨯uₕ + f) / h, following the original TRiSK scheme
 function trisk_coriolis_term!(output::AbstractMatrix{TF}, weightsOnEdge::AbstractVector, edgesOnEdge, h_edge, u, pv_edge) where {TF}
 
     N_SIMD = simd_length(TF)
@@ -96,7 +96,7 @@ trisk_coriolis_term!(output::AbstractArray{N},
         trisk_coriolis_term!(output, tR.weights, tR.indices, h_edge, u, pv_edge)
 
 
-#This computes (∇×uₕ + f)*u⟂ in the same manner as is done on MPAS 
+#This computes -(∇×uₕ + f)*u⟂ in the same manner as is done on MPAS 
 @inline function local_mpas_coriolis_term(Inds::TT, we::AbstractVector{TF}, eoe::AbstractVector{<:Integer}, u, absolute_vorticity_edge) where {TT<:Tuple, TF}
 
     @inbounds begin
@@ -110,10 +110,10 @@ trisk_coriolis_term!(output::AbstractArray{N},
         end
     end
 
-    return r
+    return -r
 end
 
-#This computes (∇×uₕ + f)*u⟂ in the same manner as is done on MPAS 
+#This computes -(∇×uₕ + f)*u⟂ in the same manner as is done on MPAS 
 function mpas_coriolis_term!(output::AbstractVector{TF}, weightsOnEdge::AbstractVector, edgesOnEdge::AbstractVector, u::AbstractVector, absolute_vorticity_edge::AbstractVector) where {TF}
     @batch for e in eachindex(output)
         @inbounds begin
@@ -128,7 +128,7 @@ function mpas_coriolis_term!(output::AbstractVector{TF}, weightsOnEdge::Abstract
     return output
 end
 
-#This computes (∇×uₕ + f)*u⟂ in the same manner as is done on MPAS 
+#This computes -(∇×uₕ + f)*u⟂ in the same manner as is done on MPAS 
 function mpas_coriolis_term!(output::AbstractMatrix{TF}, weightsOnEdge::AbstractVector, edgesOnEdge::AbstractVector, u::AbstractMatrix, absolute_vorticity_edge::AbstractMatrix) where {TF}
 
     N_SIMD = simd_length(TF)

@@ -566,7 +566,7 @@ edge_curl_field = 2 .* ( axis .⋅ normalize.(mesh_spherical.edges.position))
 
 end
 
-edge_mpas_coriolis_term = edge_tVec_field .* edge_curl_field
+edge_mpas_coriolis_term = .- edge_tVec_field .* edge_curl_field
 edge_mpas_coriolis_term2D = zeros(10, length(edge_mpas_coriolis_term))
 for k in axes(edge_mpas_coriolis_term2D, 1)
     edge_mpas_coriolis_term2D[k, :] .= edge_mpas_coriolis_term

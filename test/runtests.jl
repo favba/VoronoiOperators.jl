@@ -111,6 +111,51 @@ end
 
 end
 
+@testset "Cell to Vertex Transformations" begin
+    cell_const_field1D = ones(ncells)
+    cell_const_field2D = ones(10, ncells)
+    cell_const_field3D = ones(10, ncells, 2)
+
+    cell_const_vec_field1D = VecArray(x = ones(ncells), y = ones(ncells))
+    cell_const_vec_field2D = VecArray(x = ones(10, ncells), y = ones(10, ncells))
+    cell_const_vec_field3D = VecArray(x = ones(10, ncells, 2), y = ones(10, ncells, 2))
+
+    for mesh in (mesh_iso, mesh_distorted)
+        for c2v in (CellToVertexArea(mesh), CellToVertexBaricentric(mesh))
+            for field in (cell_const_field1D, cell_const_field2D, cell_const_field3D)
+                @test all(isapprox(1), c2v(field))
+                v_field = c2v(field)
+                @test all(isapprox(2), c2v(v_field, +, field))
+            end
+            for field in (cell_const_vec_field1D, cell_const_vec_field2D, cell_const_vec_field3D)
+                @test all(isapprox(1.0𝐢 + 1.0𝐣), c2v(field))
+                v_field = c2v(field)
+                @test all(isapprox(2.0𝐢 + 2.0𝐣), c2v(v_field, +, field))
+            end
+        end
+    end
+
+    cell_const_field1D = ones(ncells_s)
+
+    cell_const_vec_field1D = VecArray(x = ones(ncells_s), y = ones(ncells_s), z = ones(ncells_s))
+
+    mesh = mesh_spherical
+
+    for c2v in (CellToVertexArea(mesh), CellToVertexBaricentric(mesh))
+        for field in (cell_const_field1D, )
+            @test all(isapprox(1), c2v(field))
+            v_field = c2v(field)
+            @test all(isapprox(2), c2v(v_field, +, field))
+        end
+        for field in (cell_const_vec_field1D, )
+            @test all(isapprox(1.0𝐢 + 1.0𝐣 + 1.0𝐤), c2v(field))
+            v_field = c2v(field)
+            @test all(isapprox(2.0𝐢 + 2.0𝐣 + 2.0𝐤), c2v(v_field, +, field))
+        end
+     end
+
+end
+
 @testset "Edge to Cell Transformations" begin
     edge_const_field1D = ones(nedges)
     edge_const_field2D = ones(10, nedges)

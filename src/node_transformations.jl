@@ -336,3 +336,91 @@ function CellToEdgeBaricentric(m::AbstractVoronoiMesh)
     ncells = m.cells.n
     return CellToEdgeBaricentric(ncells, cellsOnEdgeBaricentric, weights)
 end
+
+abstract type CellToVertexTransformation <: LinearVoronoiOperator end
+
+name_input(::CellToVertexTransformation) = "cell"
+name_output(::CellToVertexTransformation) = "vertex"
+
+struct CellToVertexArea{TI, TF} <: CellToVertexTransformation
+    n::Int
+    indices::Vector{FixedVector{3, TI}}
+    weights::Vector{FixedVector{3, TF}}
+end
+
+CellToVertexArea(cells::Cells, vertices::Vertices) = CellToVertexArea(cells.n, vertices.cells, map(x-> (x ./ sum(x)), vertices.kiteAreasMimetic))
+CellToVertexArea(m::VoronoiMesh) = CellToVertexArea(m.cells, m.vertices)
+
+struct CellToVertexBaricentric{TI, TF} <: CellToVertexTransformation
+    n::Int
+    indices::Vector{FixedVector{3, TI}}
+    weights::Vector{FixedVector{3, TF}}
+end
+
+function compute_baricentric_cell_to_vertex_periodic!(w, cell_pos, v_pos, cellsOnVertex, x_period::Number, y_period::Number)
+
+    @batch for v in eachindex(cellsOnVertex)
+        @inbounds begin
+            vp = v_pos[v]
+
+            c1, c2, c3 = cellsOnVertex[v]
+
+            c1p = closest(vp, cell_pos[c1], x_period, y_period)
+            c2p = closest(vp, cell_pos[c2], x_period, y_period)
+            c3p = closest(vp, cell_pos[c3], x_period, y_period)
+
+            a1 = area(vp, c2p, c3p)
+            a2 = area(vp, c3p, c1p)
+            a3 = area(vp, c1p, c2p)
+
+            at = a1+a2+a3
+
+            w[v] = (a1/at, a2/at, a3/at)
+        end
+    end
+
+    return w
+end
+
+function compute_baricentric_cell_to_vertex_periodic(cell_pos, vertex_pos, cellsOnVertex, x_period::Number, y_period::Number)
+    TF = eltype(cell_pos.x)
+    w = Vector{FixedVector{3, TF}}(undef, length(cellsOnVertex))
+    return compute_baricentric_cell_to_vertex_periodic!(w, cell_pos, vertex_pos, cellsOnVertex, x_period, y_period)
+end
+
+CellToVertexBaricentric(cells::Cells{false}, vertices::Vertices{false}) = CellToVertexBaricentric(cells.n, vertices.cells, compute_baricentric_cell_to_vertex_periodic(cells.position, vertices.position, vertices.cells, cells.x_period, cells.y_period))
+
+function compute_baricentric_cell_to_vertex_spherical!(w, cell_pos, v_pos, cellsOnVertex, R::Number)
+
+    @batch for v in eachindex(cellsOnVertex)
+        @inbounds begin
+            vp = v_pos[v] / R
+
+            c1, c2, c3 = cellsOnVertex[v]
+
+            c1p = cell_pos[c1] / R
+            c2p = cell_pos[c2] / R
+            c3p = cell_pos[c3] / R
+
+            a1 = spherical_polygon_area(1, vp, c2p, c3p)
+            a2 = spherical_polygon_area(1, vp, c3p, c1p)
+            a3 = spherical_polygon_area(1, vp, c1p, c2p)
+
+            at = a1+a2+a3
+
+            w[v] = (a1/at, a2/at, a3/at)
+        end
+    end
+
+    return w
+end
+
+function compute_baricentric_cell_to_vertex_spherical(cell_pos, vertex_pos, cellsOnVertex, R::Number)
+    TF = eltype(cell_pos.x)
+    w = Vector{FixedVector{3, TF}}(undef, length(cellsOnVertex))
+    return compute_baricentric_cell_to_vertex_spherical!(w, cell_pos, vertex_pos, cellsOnVertex, R)
+end
+
+CellToVertexBaricentric(cells::Cells{true}, vertices::Vertices{true}) = CellToVertexBaricentric(cells.n, vertices.cells, compute_baricentric_cell_to_vertex_spherical(cells.position, vertices.position, vertices.cells, cells.sphere_radius))
+
+CellToVertexBaricentric(m::VoronoiMesh) = CellToVertexBaricentric(m.cells, m.vertices)

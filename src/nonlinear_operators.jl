@@ -27,7 +27,7 @@ end
 
 
 #This computes -pv*h*u⟂, where pv = (∇⨯uₕ + f) / h, following the original TRiSK scheme
-@inline function local_trisk_coriolis_term(Inds::TT, we::AbstractVector{TF}, eoe::AbstractVector{<:Integer}, h_edge, u, pv_edge) where {TT<:Tuple, TF}
+@inline function local_trisk_coriolis_term(Inds::TT, we::AbstractVector{TF}, eoe::AbstractVector{<:Integer}, uh_edge, pv_edge) where {TT<:Tuple, TF}
 
     @inbounds begin
         pve_half = pv_edge[Inds...] / 2
@@ -36,7 +36,7 @@ end
         for i in eachindex(eoe)
             ep = Int(eoe[i])
             Indsp = construct_new_node_index(ep, Inds...)
-            r = muladd(we[i], h_edge[Indsp...] * u[Indsp...] * muladd(0.5, pv_edge[Indsp...], pve_half), r)
+            r = muladd(we[i], uh_edge[Indsp...] * muladd(0.5, pv_edge[Indsp...], pve_half), r)
         end
     end
 
@@ -44,16 +44,16 @@ end
 end
 
 #This computes -pv*h*u⟂, where pv = (∇⨯uₕ + f) / h, following the original TRiSK scheme
-function trisk_coriolis_term!(output::AbstractVector{TF}, weightsOnEdge::AbstractVector, edgesOnEdge, h_edge, u, pv_edge) where {TF}
+function trisk_coriolis_term!(output::AbstractVector{TF}, weightsOnEdge::AbstractVector, edgesOnEdge, uh_edge, pv_edge) where {TF}
     @batch for e in eachindex(output)
-        @inbounds output[e] = local_trisk_coriolis_term((e,), weightsOnEdge[e], edgesOnEdge[e], h_edge, u, pv_edge)
+        @inbounds output[e] = local_trisk_coriolis_term((e,), weightsOnEdge[e], edgesOnEdge[e], uh_edge, pv_edge)
     end
     return output
 end
 
 
 #This computes -pv*h*u⟂, where pv = (∇⨯uₕ + f) / h, following the original TRiSK scheme
-function trisk_coriolis_term!(output::AbstractMatrix{TF}, weightsOnEdge::AbstractVector, edgesOnEdge, h_edge, u, pv_edge) where {TF}
+function trisk_coriolis_term!(output::AbstractMatrix{TF}, weightsOnEdge::AbstractVector, edgesOnEdge, uh_edge, pv_edge) where {TF}
 
     N_SIMD = simd_length(TF)
     ValN_SIMD = Val{N_SIMD}()
@@ -74,13 +74,13 @@ function trisk_coriolis_term!(output::AbstractMatrix{TF}, weightsOnEdge::Abstrac
                 k_simd = lane + k
 
                 output[k_simd, e] = local_trisk_coriolis_term(
-                    (k_simd, e), we_simd, eoe, h_edge, u, pv_edge
+                    (k_simd, e), we_simd, eoe, uh_edge, pv_edge
                 )
             end
 
             if is_there_rest
                 output[k_simd_end, e] = local_trisk_coriolis_term(
-                    (k_simd_end, e), we_simd, eoe, h_edge, u, pv_edge
+                    (k_simd_end, e), we_simd, eoe, uh_edge, pv_edge
                 )
             end
         end #inbounds
@@ -91,9 +91,9 @@ end
 
 trisk_coriolis_term!(output::AbstractArray{N},
     tR::TangentialVelocityReconstruction,
-    h_edge::AbstractArray{N}, u::AbstractArray{N},
+    uh_edge::AbstractArray{N},
     pv_edge::AbstractArray{N}) where {N} =
-        trisk_coriolis_term!(output, tR.weights, tR.indices, h_edge, u, pv_edge)
+        trisk_coriolis_term!(output, tR.weights, tR.indices, uh_edge, pv_edge)
 
 
 #This computes -(∇×uₕ + f)*u⟂ in the same manner as is done on MPAS 

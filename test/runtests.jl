@@ -643,26 +643,26 @@ end
     @test isapprox(edge_mpas_coriolis_term2D, cori_mpas2D, rtol=1e-2)
 
     hv = 2 .* ones(mesh.vertices.n)
-    he = 2 .* ones(mesh.edges.n)
+    uhe = 2 .* ones(mesh.edges.n) .* edge_Vec_field
 
     pv_vertex = curl_v(edge_Vec_field) ./ hv 
     pv_edge = vte(pv_vertex)
     cori_trisk = similar(edge_Vec_field)
 
-    VoronoiOperators.trisk_coriolis_term!(cori_trisk, tR, he, edge_Vec_field, pv_edge)
+    VoronoiOperators.trisk_coriolis_term!(cori_trisk, tR, uhe, pv_edge)
 
 
     @test isapprox(edge_mpas_coriolis_term, cori_trisk, rtol=1e-2)
 
     pv_edge2D = zeros(10, length(pv_edge))
-    he2D = zeros(10, length(he))
+    uhe2D = zeros(10, length(uhe))
     for k in axes(edge_Vec_field2D, 1)
         pv_edge2D[k, :] .= pv_edge
-        he2D[k, :] .= he
+        uhe2D[k, :] .= uhe
     end
-    cori_trisk2D = similar(he2D)
+    cori_trisk2D = similar(uhe2D)
 
-    VoronoiOperators.trisk_coriolis_term!(cori_trisk2D, tR, he2D, edge_Vec_field2D, pv_edge2D)
+    VoronoiOperators.trisk_coriolis_term!(cori_trisk2D, tR, uhe2D, pv_edge2D)
 
     @test isapprox(edge_mpas_coriolis_term2D, cori_trisk2D, rtol=1e-2)
 end

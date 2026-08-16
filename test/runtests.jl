@@ -627,7 +627,7 @@ end
     e_curl = curl_ev(edge_Vec_field)
     cori_mpas = similar(edge_Vec_field)
 
-    VoronoiOperators.mpas_coriolis_term!(cori_mpas, tR, edge_Vec_field, e_curl)
+    VoronoiOperators.trisk_coriolis_term!(cori_mpas, tR, edge_Vec_field, e_curl)
 
     @test isapprox(edge_mpas_coriolis_term, cori_mpas, rtol=1e-2)
 
@@ -639,7 +639,7 @@ end
     end
 
     cori_mpas2D = similar(e_curl2D)
-    VoronoiOperators.mpas_coriolis_term!(cori_mpas2D, tR, edge_Vec_field2D, e_curl2D)
+    VoronoiOperators.trisk_coriolis_term!(cori_mpas2D, tR, edge_Vec_field2D, e_curl2D)
     @test isapprox(edge_mpas_coriolis_term2D, cori_mpas2D, rtol=1e-2)
 
     hv = 2 .* ones(mesh.vertices.n)

@@ -11,7 +11,7 @@ Base.@propagate_inbounds sd._pointer(arr::PtrArray, i, I) =
     @inline ntuple(f , Val{N}())
 end
 
-function mytmap!(func::F, output, var::Vararg{N}) where {F <: Function, N}
+function mytmap!(output, func::F, var::Vararg{N}) where {F <: Function, N}
     @batch for i in eachindex(output)
         #@inbounds output[i] = @inline func(map(x -> @inbounds(x[i]), var)...)
         t = @inline get_same_index(var, i)
